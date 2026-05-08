@@ -141,35 +141,35 @@ TEXTS = {
         "wrong_password": "Mot de passe incorrect. Accès refusé."
     },
     "ht": {
-        "app_title": "🧠 Gesner AI – Antreynje AI Pèsonèl Ayisyen w la",
+        "app_title": "🧠 Gesner AI – Antrene AI Pèsonèl Ayisyen w la",
         "subtitle": "Anseye m atravè chat, tèks, imaj oswa fichye. M aprann de tout sa w pataje avè m.",
         "chat_title": "💬 Pale ak Gesner AI",
         "user_prefix": "🧑‍💻 Ou : ",
         "assistant_prefix": "🤖 Gesner AI : ",
         "send_button": "Voye",
         "chat_input_placeholder": "Tape mesaj ou a :",
-        "training_text_title": "📚 Antreynje m (tèks)",
+        "training_text_title": "📚 Antrene m (tèks)",
         "expand_text": "Ajoute yon reyalite oswa yon kesyon‑repons",
         "text_area_label": "Antre yon konesans (egzanp: 'Kapital Ayiti se Pòtoprens')",
-        "train_text_button": "Antreynje ak tèks sa a",
-        "audio_title": "🎤 Antreynje m ak odyo",
+        "train_text_button": "Antrene ak tèks sa a",
+        "audio_title": "🎤 Antrene m ak odyo",
         "expand_audio": "Chaje yon fichye odyo (w ap bezwen transkri a men – oswa itilize yon sèvis)",
         "audio_upload_label": "Chwazi yon fichye odyo",
-        "transcribe_label": "Apre w fin koute, ekri transkripsyon an anba a pou antreynje m :",
+        "transcribe_label": "Apre w fin koute, ekri transkripsyon an anba a pou antrene m :",
         "transcription_textarea": "Tèks transkri apati odyo a",
-        "train_transcription_button": "Antreynje ak transkripsyon sa a",
-        "image_title": "🖼️ Antreynje m ak imaj",
+        "train_transcription_button": "Antrene ak transkripsyon sa a",
+        "image_title": "🖼️ Antrene m ak imaj",
         "expand_image": "Chaje yon imaj + deskripsyon",
         "image_upload_label": "Chwazi yon imaj",
         "image_description_label": "Dekri sa imaj sa a anseye",
-        "train_image_button": "Antreynje ak imaj sa a",
-        "file_title": "📄 Antreynje m ak fichye tèks",
+        "train_image_button": "Antrene ak imaj sa a",
+        "file_title": "📄 Antrene m ak fichye tèks",
         "expand_file": "Chaje yon fichye .txt oswa .md",
         "file_upload_label": "Chwazi yon fichye tèks",
-        "train_file_button": "Antreynje ak fichye sa a",
-        "knowledge_base": "📊 Baz konesans : {count} reyalite antreynen",
+        "train_file_button": "Antrene ak fichye sa a",
+        "knowledge_base": "📊 Baz konesans : {count} reyalite antrene",
         "clear_chat_button": "Efase listorik chat la",
-        "footer": "© GlobalInternet.py – Gesner AI, antreynen nan fason ayisyen an.",
+        "footer": "© GlobalInternet.py – Gesner AI, antrene nan fason ayisyen an.",
         "sidebar_company": "GlobalInternet.py",
         "sidebar_product": "Gesner AI – AI Pèsonèl ou",
         "built_by": "Konstwi pa Gesner Deslandes – Enjenyè anchèf",
@@ -186,23 +186,23 @@ TEXTS = {
 | **Antrepriz** | $999 |
 """,
         "logout_button": "🔓 Dekonekte",
-        "no_facts_answer": "Mwen poko genyen antreynman espesifik sou sa. Tanpri anseye m nan seksyon Antreynman anba a! Kesyon ou a : {question}",
+        "no_facts_answer": "Mwen poko genyen antreman espesifik sou sa. Tanpri anseye m nan seksyon Antreman anba a! Kesyon ou a : {question}",
         "with_facts_answer": "Dapre sa m te aprann:\n{context}\n\nPou reponn kesyon ou a : {question} – èske sa ede w ?",
-        "training_success": "✅ Antreynen : {text}...",
-        "warning_no_text": "Tanpri antre kèk tèks pou antreynje.",
+        "training_success": "✅ Antrene : {text}...",
+        "warning_no_text": "Tanpri antre kèk tèks pou antrene.",
         "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
-        "warning_no_description": "Tanpri ajoute yon deskripsyon pou antreynje AI a.",
+        "warning_no_description": "Tanpri ajoute yon deskripsyon pou antrene AI a.",
         "file_preview": "Aperçu fichye a",
         "image_caption": "Imaj chaje",
         "audio_warning": "Fichye odyo chaje – tanpri tape transkripsyon an pi wo a.",
         "login_title": "Gesner AI",
-        "login_message": "Antre modpas pou antreynje AI pèsonèl ou",
+        "login_message": "Antre modpas pou antrene AI pèsonèl ou",
         "login_button": "Konekte",
         "wrong_password": "Modpas pa bon. Aksè refize."
     }
 }
 
-# ---------- CUSTOM CSS (same as before) ----------
+# ---------- CUSTOM CSS (unchanged) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -463,8 +463,6 @@ def main_app():
 
 # ---------- ROUTING ----------
 if not st.session_state.authenticated:
-    # Language selection is available on login page too (sidebar is not shown, so we put language selector on login)
-    # Simple language selector for login page
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.selectbox("🌐 Language / Langue / Lang", lang_names, key="login_lang")
     st.session_state.language = LANGUAGES[selected_lang_name]
