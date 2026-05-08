@@ -12,6 +12,163 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------- LANGUAGES ----------
+LANGUAGES = {
+    "English": "en",
+    "Français": "fr",
+    "Kreyòl Ayisyen": "ht"
+}
+
+TEXTS = {
+    "en": {
+        "app_title": "🧠 Gesner AI – Train Your Personal Haitian AI",
+        "subtitle": "Teach me through chat, text, images, or files. I learn from everything you share.",
+        "chat_title": "💬 Chat with Gesner AI",
+        "user_prefix": "🧑‍💻 You: ",
+        "assistant_prefix": "🤖 Gesner AI: ",
+        "send_button": "Send",
+        "chat_input_placeholder": "Type your message:",
+        "training_text_title": "📚 Train Me (Text)",
+        "expand_text": "Add a fact or question‑answer pair",
+        "text_area_label": "Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')",
+        "train_text_button": "Train with this text",
+        "audio_title": "🎤 Train Me with Audio",
+        "expand_audio": "Upload an audio file (you'll need to transcribe manually – or use a service)",
+        "audio_upload_label": "Choose an audio file",
+        "transcribe_label": "After listening, type the transcription below to train me:",
+        "transcription_textarea": "Transcribed text from the audio",
+        "train_transcription_button": "Train with this transcription",
+        "image_title": "🖼️ Train Me with Images",
+        "expand_image": "Upload an image + description",
+        "image_upload_label": "Choose an image",
+        "image_description_label": "Describe what this image teaches",
+        "train_image_button": "Train with this image",
+        "file_title": "📄 Train Me with Text Files",
+        "expand_file": "Upload .txt or .md file",
+        "file_upload_label": "Choose a text file",
+        "train_file_button": "Train with this file",
+        "knowledge_base": "📊 Knowledge Base: {count} facts trained",
+        "clear_chat_button": "Clear Chat History",
+        "footer": "© GlobalInternet.py – Gesner AI, trained the Haitian way.",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – Your Personal AI",
+        "built_by": "Built by Gesner Deslandes – Coder in Chief",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Website:",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Pricing",
+        "pricing_table": """
+| License | Price |
+|---------|-------|
+| **Personal** | $49 |
+| **Business** | $299 |
+| **Enterprise** | $999 |
+""",
+        "logout_button": "🔓 Logout",
+        "no_facts_answer": "I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {question}",
+        "with_facts_answer": "Based on what I've learned:\n{context}\n\nTo answer your question: {question} – does that help?"
+    },
+    "fr": {
+        "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
+        "subtitle": "Enseignez‑moi par chat, texte, images ou fichiers. J’apprends de tout ce que vous partagez.",
+        "chat_title": "💬 Discuter avec Gesner IA",
+        "user_prefix": "🧑‍💻 Vous : ",
+        "assistant_prefix": "🤖 Gesner IA : ",
+        "send_button": "Envoyer",
+        "chat_input_placeholder": "Tapez votre message :",
+        "training_text_title": "📚 Entraînez‑moi (texte)",
+        "expand_text": "Ajoutez un fait ou une paire question‑réponse",
+        "text_area_label": "Entrez une connaissance (ex. 'La capitale d'Haïti est Port‑au‑Prince')",
+        "train_text_button": "Entraîner avec ce texte",
+        "audio_title": "🎤 Entraînez‑moi avec l’audio",
+        "expand_audio": "Téléchargez un fichier audio (vous devrez transcrire manuellement – ou utiliser un service)",
+        "audio_upload_label": "Choisissez un fichier audio",
+        "transcribe_label": "Après avoir écouté, saisissez la transcription ci‑dessous pour m’entraîner :",
+        "transcription_textarea": "Texte transcrit à partir de l’audio",
+        "train_transcription_button": "Entraîner avec cette transcription",
+        "image_title": "🖼️ Entraînez‑moi avec des images",
+        "expand_image": "Téléchargez une image + description",
+        "image_upload_label": "Choisissez une image",
+        "image_description_label": "Décrivez ce que cette image enseigne",
+        "train_image_button": "Entraîner avec cette image",
+        "file_title": "📄 Entraînez‑moi avec des fichiers texte",
+        "expand_file": "Téléchargez un fichier .txt ou .md",
+        "file_upload_label": "Choisissez un fichier texte",
+        "train_file_button": "Entraîner avec ce fichier",
+        "knowledge_base": "📊 Base de connaissances : {count} faits appris",
+        "clear_chat_button": "Effacer l’historique du chat",
+        "footer": "© GlobalInternet.py – Gesner IA, formée à la haïtienne.",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner IA – Votre IA personnelle",
+        "built_by": "Construit par Gesner Deslandes – Ingénieur en chef",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Site web :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Tarifs",
+        "pricing_table": """
+| Licence | Prix |
+|---------|------|
+| **Personnelle** | 49 $ |
+| **Entreprise** | 299 $ |
+| **Grande entreprise** | 999 $ |
+""",
+        "logout_button": "🔓 Déconnexion",
+        "no_facts_answer": "Je n’ai pas encore d’apprentissage spécifique sur ce sujet. Veuillez m’enseigner en utilisant la section Entraînement ci‑dessous ! Votre question : {question}",
+        "with_facts_answer": "D’après ce que j’ai appris :\n{context}\n\nPour répondre à votre question : {question} – cela vous aide‑t‑il ?"
+    },
+    "ht": {
+        "app_title": "🧠 Gesner AI – Antreynje AI Pèsonèl Ayisyen w la",
+        "subtitle": "Anseye m atravè chat, tèks, imaj oswa fichye. M aprann de tout sa w pataje avè m.",
+        "chat_title": "💬 Pale ak Gesner AI",
+        "user_prefix": "🧑‍💻 Ou : ",
+        "assistant_prefix": "🤖 Gesner AI : ",
+        "send_button": "Voye",
+        "chat_input_placeholder": "Tape mesaj ou a :",
+        "training_text_title": "📚 Antreynje m (tèks)",
+        "expand_text": "Ajoute yon reyalite oswa yon kesyon‑repons",
+        "text_area_label": "Antre yon konesans (egzanp: 'Kapital Ayiti se Pòtoprens')",
+        "train_text_button": "Antreynje ak tèks sa a",
+        "audio_title": "🎤 Antreynje m ak odyo",
+        "expand_audio": "Chaje yon fichye odyo (w ap bezwen transkri a men – oswa itilize yon sèvis)",
+        "audio_upload_label": "Chwazi yon fichye odyo",
+        "transcribe_label": "Apre w fin koute, ekri transkripsyon an anba a pou antreynje m :",
+        "transcription_textarea": "Tèks transkri apati odyo a",
+        "train_transcription_button": "Antreynje ak transkripsyon sa a",
+        "image_title": "🖼️ Antreynje m ak imaj",
+        "expand_image": "Chaje yon imaj + deskripsyon",
+        "image_upload_label": "Chwazi yon imaj",
+        "image_description_label": "Dekri sa imaj sa a anseye",
+        "train_image_button": "Antreynje ak imaj sa a",
+        "file_title": "📄 Antreynje m ak fichye tèks",
+        "expand_file": "Chaje yon fichye .txt oswa .md",
+        "file_upload_label": "Chwazi yon fichye tèks",
+        "train_file_button": "Antreynje ak fichye sa a",
+        "knowledge_base": "📊 Baz konesans : {count} reyalite antreynen",
+        "clear_chat_button": "Efase listorik chat la",
+        "footer": "© GlobalInternet.py – Gesner AI, antreynen nan fason ayisyen an.",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – AI Pèsonèl ou",
+        "built_by": "Konstwi pa Gesner Deslandes – Enjenyè anchèf",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Sitwèb :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Pri",
+        "pricing_table": """
+| Lisans | Pri |
+|--------|-----|
+| **Pèsonèl** | $49 |
+| **Biznis** | $299 |
+| **Antrepriz** | $999 |
+""",
+        "logout_button": "🔓 Dekonekte",
+        "no_facts_answer": "Mwen poko genyen antreynman espesifik sou sa. Tanpri anseye m nan seksyon Antreynman anba a! Kesyon ou a : {question}",
+        "with_facts_answer": "Dapre sa m te aprann:\n{context}\n\nPou reponn kesyon ou a : {question} – èske sa ede w ?"
+    }
+}
+
 # ---------- CUSTOM CSS – FORCE ALL TEXT WHITE ----------
 st.markdown("""
 <style>
@@ -22,18 +179,15 @@ st.markdown("""
         background: linear-gradient(180deg, #0f3460 0%, #1a1a2e 100%);
         border-right: 2px solid #e94560;
     }
-    /* Force every text element in main area and sidebar to white */
     .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
     .stFileUploader label, .stButton button, .stCaption, .stMetric label,
     .stExpander, .stExpander summary, .stExpander p, .stExpander div,
     h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer {
         color: #ffffff !important;
     }
-    /* Expander header background (semi-transparent) */
     .streamlit-expanderHeader {
         background-color: rgba(15,52,96,0.8) !important;
     }
-    /* Button text stays white */
     .stButton button {
         background-color: #e94560 !important;
         color: white !important;
@@ -44,7 +198,6 @@ st.markdown("""
     .stButton button:hover {
         background-color: #ff6b6b !important;
     }
-    /* Input fields background */
     .stTextInput input, .stTextArea textarea {
         background-color: #0f3460 !important;
         color: white !important;
@@ -52,7 +205,6 @@ st.markdown("""
     .stTextInput input::placeholder, .stTextArea textarea::placeholder {
         color: #cccccc !important;
     }
-    /* Chat messages already have colored backgrounds – keep text white */
     .chat-message {
         padding: 1rem;
         border-radius: 20px;
@@ -67,11 +219,9 @@ st.markdown("""
         background: linear-gradient(135deg, #0f3460, #1a4a7a);
         color: white;
     }
-    /* File uploader text */
     .stFileUploader div {
         color: white !important;
     }
-    /* Pricing table inside markdown – ensure white */
     table, th, td {
         color: white !important;
         border-color: #e94560 !important;
@@ -100,6 +250,8 @@ if "embedding_model" not in st.session_state:
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     st.session_state.index = None
     st.session_state.texts = []
+if "language" not in st.session_state:
+    st.session_state.language = "en"
 
 def logout():
     st.session_state.authenticated = False
@@ -162,14 +314,21 @@ def retrieve_relevant_facts(query, k=3):
 
 def generate_response(user_input):
     facts = retrieve_relevant_facts(user_input, k=3)
+    t = TEXTS[st.session_state.language]
     if facts:
         context = "\n".join(facts)
-        answer = f"Based on what I've learned:\n{context}\n\nTo answer your question: {user_input} – does that help?"
+        return t["with_facts_answer"].format(context=context, question=user_input)
     else:
-        answer = f"I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {user_input}"
-    return answer
+        return t["no_facts_answer"].format(question=user_input)
 
 def show_sidebar():
+    # Language selector
+    lang_names = list(LANGUAGES.keys())
+    selected_lang_name = st.sidebar.selectbox("🌐 Language / Langue / Lang", lang_names)
+    st.session_state.language = LANGUAGES[selected_lang_name]
+    t = TEXTS[st.session_state.language]
+
+    # Spinning globe
     st.sidebar.markdown("""
     <div style="text-align: center;">
         <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
@@ -178,44 +337,38 @@ def show_sidebar():
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
     """, unsafe_allow_html=True)
-    st.sidebar.markdown("## **GlobalInternet.py**")
-    st.sidebar.markdown("### Gesner AI – Your Personal AI")
+    st.sidebar.markdown(f"## **{t['sidebar_company']}**")
+    st.sidebar.markdown(f"### {t['sidebar_product']}")
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**Built by Gesner Deslandes** – Coder in Chief")
-    st.sidebar.markdown("📞 (509)-47385663")
-    st.sidebar.markdown("✉️ deslandes78@gmail.com")
+    st.sidebar.markdown(f"**{t['built_by']}**")
+    st.sidebar.markdown(t['phone'])
+    st.sidebar.markdown(t['email'])
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**🌐 Website:**")
-    st.sidebar.markdown("[https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/](https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/)")
+    st.sidebar.markdown(f"{t['website_label']} [{t['website_link']}]({t['website_link']})")
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 💰 Pricing")
-    st.sidebar.markdown("""
-    | License | Price |
-    |---------|-------|
-    | **Personal** | $49 |
-    | **Business** | $299 |
-    | **Enterprise** | $999 |
-    """)
-    if st.sidebar.button("🔓 Logout", use_container_width=True):
+    st.sidebar.markdown(f"### {t['pricing_title']}")
+    st.sidebar.markdown(t['pricing_table'])
+    if st.sidebar.button(t['logout_button'], use_container_width=True):
         logout()
 
 def main_app():
+    t = TEXTS[st.session_state.language]
     show_sidebar()
     load_previous_training()
 
-    st.markdown("<h1 style='text-align:center;'>🧠 Gesner AI – Train Your Personal Haitian AI</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Teach me through chat, text, images, or files. I learn from everything you share.</p>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
 
     # --- Chat Interface ---
-    st.markdown("## 💬 Chat with Gesner AI")
+    st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">🧑‍💻 You: {msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="chat-message assistant-message">🤖 Gesner AI: {msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
 
-    user_input = st.text_input("Type your message:", key="chat_input")
-    if st.button("Send", use_container_width=True):
+    user_input = st.text_input(t["chat_input_placeholder"], key="chat_input")
+    if st.button(t["send_button"], use_container_width=True):
         if user_input.strip():
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             response = generate_response(user_input)
@@ -224,56 +377,56 @@ def main_app():
 
     # --- Training Section (Text) ---
     st.markdown("---")
-    st.markdown("## 📚 Train Me (Text)")
-    with st.expander("Add a fact or question‑answer pair"):
-        training_text = st.text_area("Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')")
-        if st.button("Train with this text", use_container_width=True):
+    st.markdown(f"## {t['training_text_title']}")
+    with st.expander(t["expand_text"]):
+        training_text = st.text_area(t["text_area_label"])
+        if st.button(t["train_text_button"], use_container_width=True):
             add_to_training(training_text)
 
-    # --- Audio Training (manual transcription) ---
-    st.markdown("## 🎤 Train Me with Audio")
-    with st.expander("Upload an audio file (you'll need to transcribe manually – or use a service)"):
-        audio_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "m4a"])
+    # --- Audio Training ---
+    st.markdown(f"## {t['audio_title']}")
+    with st.expander(t["expand_audio"]):
+        audio_file = st.file_uploader(t["audio_upload_label"], type=["wav", "mp3", "m4a"])
         if audio_file is not None:
             st.audio(audio_file, format="audio/wav")
-            st.markdown("**After listening, type the transcription below to train me:**")
-            transcribed_text = st.text_area("Transcribed text from the audio")
-            if st.button("Train with this transcription", use_container_width=True):
+            st.markdown(f"**{t['transcribe_label']}**")
+            transcribed_text = st.text_area(t["transcription_textarea"])
+            if st.button(t["train_transcription_button"], use_container_width=True):
                 if transcribed_text:
                     add_to_training(transcribed_text)
                 else:
                     st.warning("Please enter the transcribed text first.")
 
     # --- Image Training ---
-    st.markdown("## 🖼️ Train Me with Images")
-    with st.expander("Upload an image + description"):
-        image_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
-        image_description = st.text_area("Describe what this image teaches")
+    st.markdown(f"## {t['image_title']}")
+    with st.expander(t["expand_image"]):
+        image_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
+        image_description = st.text_area(t["image_description_label"])
         if image_file is not None:
             st.image(image_file, caption="Uploaded Image", width=200)
-            if st.button("Train with this image", use_container_width=True):
+            if st.button(t["train_image_button"], use_container_width=True):
                 if image_description:
                     add_to_training(image_description)
                 else:
                     st.warning("Please add a description to train the AI.")
 
     # --- File Upload (Text) ---
-    st.markdown("## 📄 Train Me with Text Files")
-    with st.expander("Upload .txt or .md file"):
-        text_file = st.file_uploader("Choose a text file", type=["txt", "md"])
+    st.markdown(f"## {t['file_title']}")
+    with st.expander(t["expand_file"]):
+        text_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
         if text_file is not None:
             content = text_file.read().decode("utf-8")
             st.text_area("File content (preview)", content, height=150)
-            if st.button("Train with this file", use_container_width=True):
+            if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content)
 
     st.markdown("---")
-    st.markdown(f"### 📊 Knowledge Base: {len(st.session_state.training_data)} facts trained")
-    if st.button("Clear Chat History", use_container_width=True):
+    st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
+    if st.button(t["clear_chat_button"], use_container_width=True):
         st.session_state.conversation_history = []
         st.rerun()
 
-    st.markdown('<div class="footer">© GlobalInternet.py – Gesner AI, trained the Haitian way.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
 
 # ---------- ROUTING ----------
 if not st.session_state.authenticated:
