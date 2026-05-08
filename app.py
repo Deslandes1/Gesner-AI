@@ -1,14 +1,10 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import json
 import os
-import time
-from datetime import datetime
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
 from PIL import Image
-import io
 
 st.set_page_config(
     page_title="Gesner AI | Your Personal Haitian AI",
@@ -16,7 +12,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- CUSTOM CSS (colorful, Haitian flag inspired) ----------
+# ---------- CUSTOM CSS – FORCE ALL TEXT WHITE ----------
 st.markdown("""
 <style>
     .stApp {
@@ -26,16 +22,37 @@ st.markdown("""
         background: linear-gradient(180deg, #0f3460 0%, #1a1a2e 100%);
         border-right: 2px solid #e94560;
     }
+    /* Force every text element in main area and sidebar to white */
+    .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
+    .stFileUploader label, .stButton button, .stCaption, .stMetric label,
+    .stExpander, .stExpander summary, .stExpander p, .stExpander div,
+    h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer {
+        color: #ffffff !important;
+    }
+    /* Expander header background (semi-transparent) */
+    .streamlit-expanderHeader {
+        background-color: rgba(15,52,96,0.8) !important;
+    }
+    /* Button text stays white */
     .stButton button {
         background-color: #e94560 !important;
         color: white !important;
         border-radius: 30px !important;
         font-weight: bold !important;
+        width: 100%;
     }
+    .stButton button:hover {
+        background-color: #ff6b6b !important;
+    }
+    /* Input fields background */
     .stTextInput input, .stTextArea textarea {
         background-color: #0f3460 !important;
         color: white !important;
     }
+    .stTextInput input::placeholder, .stTextArea textarea::placeholder {
+        color: #cccccc !important;
+    }
+    /* Chat messages already have colored backgrounds – keep text white */
     .chat-message {
         padding: 1rem;
         border-radius: 20px;
@@ -50,8 +67,17 @@ st.markdown("""
         background: linear-gradient(135deg, #0f3460, #1a4a7a);
         color: white;
     }
-    h1, h2, h3 {
-        color: #ffd966 !important;
+    /* File uploader text */
+    .stFileUploader div {
+        color: white !important;
+    }
+    /* Pricing table inside markdown – ensure white */
+    table, th, td {
+        color: white !important;
+        border-color: #e94560 !important;
+    }
+    th {
+        background-color: #0f3460 !important;
     }
     .footer {
         text-align: center;
@@ -59,31 +85,14 @@ st.markdown("""
         padding: 1rem;
         border-top: 1px solid #e94560;
     }
-    .training-card {
-        background: rgba(0,0,0,0.5);
-        border-radius: 15px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
-
-# ---------- SPINNING GLOBE ----------
-def spinning_globe():
-    st.sidebar.markdown("""
-    <div style="text-align: center;">
-        <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-    </div>
-    <style>
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    </style>
-    """, unsafe_allow_html=True)
 
 # ---------- LOGIN / LOGOUT ----------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "training_data" not in st.session_state:
-    st.session_state.training_data = []  # list of {"text": str, "embedding": list}
+    st.session_state.training_data = []
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 if "embedding_model" not in st.session_state:
@@ -113,7 +122,6 @@ def login_page():
             st.error("Incorrect password.")
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text):
     if not text.strip():
         return
@@ -161,9 +169,15 @@ def generate_response(user_input):
         answer = f"I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {user_input}"
     return answer
 
-# ---------- SIDEBAR ----------
 def show_sidebar():
-    spinning_globe()
+    st.sidebar.markdown("""
+    <div style="text-align: center;">
+        <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
+    </div>
+    <style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+    """, unsafe_allow_html=True)
     st.sidebar.markdown("## **GlobalInternet.py**")
     st.sidebar.markdown("### Gesner AI – Your Personal AI")
     st.sidebar.markdown("---")
@@ -185,7 +199,6 @@ def show_sidebar():
     if st.sidebar.button("🔓 Logout", use_container_width=True):
         logout()
 
-# ---------- MAIN APP ----------
 def main_app():
     show_sidebar()
     load_previous_training()
@@ -217,7 +230,7 @@ def main_app():
         if st.button("Train with this text", use_container_width=True):
             add_to_training(training_text)
 
-    # --- Audio Training (simplified – manual transcription) ---
+    # --- Audio Training (manual transcription) ---
     st.markdown("## 🎤 Train Me with Audio")
     with st.expander("Upload an audio file (you'll need to transcribe manually – or use a service)"):
         audio_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "m4a"])
@@ -235,7 +248,7 @@ def main_app():
     st.markdown("## 🖼️ Train Me with Images")
     with st.expander("Upload an image + description"):
         image_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
-        image_description = st.text_area("Describe what this image teaches (required)")
+        image_description = st.text_area("Describe what this image teaches")
         if image_file is not None:
             st.image(image_file, caption="Uploaded Image", width=200)
             if st.button("Train with this image", use_container_width=True):
@@ -254,7 +267,6 @@ def main_app():
             if st.button("Train with this file", use_container_width=True):
                 add_to_training(content)
 
-    # --- Show trained facts count ---
     st.markdown("---")
     st.markdown(f"### 📊 Knowledge Base: {len(st.session_state.training_data)} facts trained")
     if st.button("Clear Chat History", use_container_width=True):
