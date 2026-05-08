@@ -67,7 +67,18 @@ TEXTS = {
 """,
         "logout_button": "🔓 Logout",
         "no_facts_answer": "I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {question}",
-        "with_facts_answer": "Based on what I've learned:\n{context}\n\nTo answer your question: {question} – does that help?"
+        "with_facts_answer": "Based on what I've learned:\n{context}\n\nTo answer your question: {question} – does that help?",
+        "training_success": "✅ Trained: {text}...",
+        "warning_no_text": "Please enter some text to train.",
+        "warning_no_transcription": "Please enter the transcribed text first.",
+        "warning_no_description": "Please add a description to train the AI.",
+        "file_preview": "File content (preview)",
+        "image_caption": "Uploaded Image",
+        "audio_warning": "Audio file uploaded – please type the transcription above.",
+        "login_title": "Gesner AI",
+        "login_message": "Enter password to train your personal AI",
+        "login_button": "Login",
+        "wrong_password": "Incorrect password. Access denied."
     },
     "fr": {
         "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
@@ -116,7 +127,18 @@ TEXTS = {
 """,
         "logout_button": "🔓 Déconnexion",
         "no_facts_answer": "Je n’ai pas encore d’apprentissage spécifique sur ce sujet. Veuillez m’enseigner en utilisant la section Entraînement ci‑dessous ! Votre question : {question}",
-        "with_facts_answer": "D’après ce que j’ai appris :\n{context}\n\nPour répondre à votre question : {question} – cela vous aide‑t‑il ?"
+        "with_facts_answer": "D’après ce que j’ai appris :\n{context}\n\nPour répondre à votre question : {question} – cela vous aide‑t‑il ?",
+        "training_success": "✅ Entraîné : {text}...",
+        "warning_no_text": "Veuillez saisir du texte à entraîner.",
+        "warning_no_transcription": "Veuillez d’abord saisir le texte transcrit.",
+        "warning_no_description": "Veuillez ajouter une description pour entraîner l’IA.",
+        "file_preview": "Aperçu du fichier",
+        "image_caption": "Image téléchargée",
+        "audio_warning": "Fichier audio téléchargé – veuillez saisir la transcription ci‑dessus.",
+        "login_title": "Gesner IA",
+        "login_message": "Entrez le mot de passe pour entraîner votre IA personnelle",
+        "login_button": "Se connecter",
+        "wrong_password": "Mot de passe incorrect. Accès refusé."
     },
     "ht": {
         "app_title": "🧠 Gesner AI – Antreynje AI Pèsonèl Ayisyen w la",
@@ -165,11 +187,22 @@ TEXTS = {
 """,
         "logout_button": "🔓 Dekonekte",
         "no_facts_answer": "Mwen poko genyen antreynman espesifik sou sa. Tanpri anseye m nan seksyon Antreynman anba a! Kesyon ou a : {question}",
-        "with_facts_answer": "Dapre sa m te aprann:\n{context}\n\nPou reponn kesyon ou a : {question} – èske sa ede w ?"
+        "with_facts_answer": "Dapre sa m te aprann:\n{context}\n\nPou reponn kesyon ou a : {question} – èske sa ede w ?",
+        "training_success": "✅ Antreynen : {text}...",
+        "warning_no_text": "Tanpri antre kèk tèks pou antreynje.",
+        "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
+        "warning_no_description": "Tanpri ajoute yon deskripsyon pou antreynje AI a.",
+        "file_preview": "Aperçu fichye a",
+        "image_caption": "Imaj chaje",
+        "audio_warning": "Fichye odyo chaje – tanpri tape transkripsyon an pi wo a.",
+        "login_title": "Gesner AI",
+        "login_message": "Antre modpas pou antreynje AI pèsonèl ou",
+        "login_button": "Konekte",
+        "wrong_password": "Modpas pa bon. Aksè refize."
     }
 }
 
-# ---------- CUSTOM CSS – FORCE ALL TEXT WHITE ----------
+# ---------- CUSTOM CSS (same as before) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -258,24 +291,26 @@ def logout():
     st.rerun()
 
 def login_page():
-    st.markdown("""
+    t = TEXTS[st.session_state.language]
+    st.markdown(f"""
     <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="login-card" style="background: rgba(15,52,96,0.8); backdrop-filter: blur(12px); border-radius: 30px; padding: 2rem; text-align: center; border: 1px solid #e94560; width: 100%; max-width: 450px; margin: auto;">
             <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">Gesner AI</div>
-            <p style="color:white;">Enter password to train your personal AI</p>
+            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">{t['login_title']}</div>
+            <p style="color:white;">{t['login_message']}</p>
     """, unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="login_pass")
-    if st.button("🔐 Login", use_container_width=True):
+    if st.button(t['login_button'], use_container_width=True):
         if password == "20082010":
             st.session_state.authenticated = True
             st.rerun()
         else:
-            st.error("Incorrect password.")
+            st.error(t['wrong_password'])
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-def add_to_training(text):
+def add_to_training(text, t):
     if not text.strip():
+        st.warning(t['warning_no_text'])
         return
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
@@ -287,7 +322,7 @@ def add_to_training(text):
     st.session_state.texts.append(text)
     with open("training_data.json", "w") as f:
         json.dump(st.session_state.training_data, f, indent=2)
-    st.success(f"✅ Trained: {text[:100]}...")
+    st.success(t['training_success'].format(text=text[:100]))
 
 def load_previous_training():
     if os.path.exists("training_data.json"):
@@ -322,13 +357,11 @@ def generate_response(user_input):
         return t["no_facts_answer"].format(question=user_input)
 
 def show_sidebar():
-    # Language selector
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.sidebar.selectbox("🌐 Language / Langue / Lang", lang_names)
     st.session_state.language = LANGUAGES[selected_lang_name]
     t = TEXTS[st.session_state.language]
 
-    # Spinning globe
     st.sidebar.markdown("""
     <div style="text-align: center;">
         <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
@@ -381,7 +414,7 @@ def main_app():
     with st.expander(t["expand_text"]):
         training_text = st.text_area(t["text_area_label"])
         if st.button(t["train_text_button"], use_container_width=True):
-            add_to_training(training_text)
+            add_to_training(training_text, t)
 
     # --- Audio Training ---
     st.markdown(f"## {t['audio_title']}")
@@ -393,9 +426,9 @@ def main_app():
             transcribed_text = st.text_area(t["transcription_textarea"])
             if st.button(t["train_transcription_button"], use_container_width=True):
                 if transcribed_text:
-                    add_to_training(transcribed_text)
+                    add_to_training(transcribed_text, t)
                 else:
-                    st.warning("Please enter the transcribed text first.")
+                    st.warning(t['warning_no_transcription'])
 
     # --- Image Training ---
     st.markdown(f"## {t['image_title']}")
@@ -403,12 +436,12 @@ def main_app():
         image_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
         image_description = st.text_area(t["image_description_label"])
         if image_file is not None:
-            st.image(image_file, caption="Uploaded Image", width=200)
+            st.image(image_file, caption=t['image_caption'], width=200)
             if st.button(t["train_image_button"], use_container_width=True):
                 if image_description:
-                    add_to_training(image_description)
+                    add_to_training(image_description, t)
                 else:
-                    st.warning("Please add a description to train the AI.")
+                    st.warning(t['warning_no_description'])
 
     # --- File Upload (Text) ---
     st.markdown(f"## {t['file_title']}")
@@ -416,9 +449,9 @@ def main_app():
         text_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
         if text_file is not None:
             content = text_file.read().decode("utf-8")
-            st.text_area("File content (preview)", content, height=150)
+            st.text_area(t['file_preview'], content, height=150)
             if st.button(t["train_file_button"], use_container_width=True):
-                add_to_training(content)
+                add_to_training(content, t)
 
     st.markdown("---")
     st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
@@ -430,6 +463,11 @@ def main_app():
 
 # ---------- ROUTING ----------
 if not st.session_state.authenticated:
+    # Language selection is available on login page too (sidebar is not shown, so we put language selector on login)
+    # Simple language selector for login page
+    lang_names = list(LANGUAGES.keys())
+    selected_lang_name = st.selectbox("🌐 Language / Langue / Lang", lang_names, key="login_lang")
+    st.session_state.language = LANGUAGES[selected_lang_name]
     login_page()
 else:
     main_app()
