@@ -3,7 +3,6 @@ import streamlit.components.v1 as components
 import json
 import os
 import time
-import speech_recognition as sr
 from datetime import datetime
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -88,7 +87,6 @@ if "training_data" not in st.session_state:
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 if "embedding_model" not in st.session_state:
-    # Load a small sentence transformer (will be cached)
     with st.spinner("Loading AI model... (first time only)"):
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     st.session_state.index = None
@@ -117,20 +115,16 @@ def login_page():
 
 # ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text):
-    """Add a text fact to the knowledge base."""
     if not text.strip():
         return
-    # Create embedding
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
-    # Update FAISS index
     if st.session_state.index is None:
         dim = len(embedding)
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.texts = []
     st.session_state.index.add(np.array([embedding], dtype=np.float32))
     st.session_state.texts.append(text)
-    # Save to disk (for persistence)
     with open("training_data.json", "w") as f:
         json.dump(st.session_state.training_data, f, indent=2)
     st.success(f"✅ Trained: {text[:100]}...")
@@ -140,7 +134,6 @@ def load_previous_training():
         with open("training_data.json", "r") as f:
             data = json.load(f)
         st.session_state.training_data = data
-        # rebuild index
         if data:
             embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
             dim = len(embeddings[0])
@@ -160,31 +153,13 @@ def retrieve_relevant_facts(query, k=3):
     return results
 
 def generate_response(user_input):
-    # Retrieve relevant facts
     facts = retrieve_relevant_facts(user_input, k=3)
-    # Simple response generation: if facts exist, use them; else generic.
     if facts:
         context = "\n".join(facts)
         answer = f"Based on what I've learned:\n{context}\n\nTo answer your question: {user_input} – does that help?"
     else:
         answer = f"I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {user_input}"
     return answer
-
-# ---------- TRANSCRIBE AUDIO ----------
-def transcribe_audio(audio_file):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(audio_file) as source:
-        audio = recognizer.record(source)
-    try:
-        text = recognizer.recognize_google(audio)
-        return text
-    except:
-        return None
-
-# ---------- ANALYZE IMAGE (simple – will just add description) ----------
-def analyze_image(image_file, user_description):
-    # For now, just use the user description as training
-    return user_description if user_description else "Image uploaded without description."
 
 # ---------- SIDEBAR ----------
 def show_sidebar():
@@ -213,14 +188,13 @@ def show_sidebar():
 # ---------- MAIN APP ----------
 def main_app():
     show_sidebar()
-    load_previous_training()  # load saved facts
+    load_previous_training()
 
     st.markdown("<h1 style='text-align:center;'>🧠 Gesner AI – Train Your Personal Haitian AI</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Teach me through chat, audio, or media uploads. I learn from everything you share.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Teach me through chat, text, images, or files. I learn from everything you share.</p>", unsafe_allow_html=True)
 
     # --- Chat Interface ---
     st.markdown("## 💬 Chat with Gesner AI")
-    # Display conversation history
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 You: {msg["content"]}</div>', unsafe_allow_html=True)
@@ -243,24 +217,25 @@ def main_app():
         if st.button("Train with this text", use_container_width=True):
             add_to_training(training_text)
 
-    # --- Audio Training ---
+    # --- Audio Training (simplified – manual transcription) ---
     st.markdown("## 🎤 Train Me with Audio")
-    with st.expander("Upload an audio file (speech)"):
-        audio_file = st.file_uploader("Choose an audio file (WAV, MP3)", type=["wav", "mp3"])
+    with st.expander("Upload an audio file (you'll need to transcribe manually – or use a service)"):
+        audio_file = st.file_uploader("Choose an audio file", type=["wav", "mp3", "m4a"])
         if audio_file is not None:
-            with st.spinner("Transcribing audio..."):
-                text = transcribe_audio(audio_file)
-                if text:
-                    st.success(f"Transcribed: {text}")
-                    add_to_training(text)
+            st.audio(audio_file, format="audio/wav")
+            st.markdown("**After listening, type the transcription below to train me:**")
+            transcribed_text = st.text_area("Transcribed text from the audio")
+            if st.button("Train with this transcription", use_container_width=True):
+                if transcribed_text:
+                    add_to_training(transcribed_text)
                 else:
-                    st.error("Could not transcribe audio. Try a clearer recording.")
+                    st.warning("Please enter the transcribed text first.")
 
     # --- Image Training ---
     st.markdown("## 🖼️ Train Me with Images")
     with st.expander("Upload an image + description"):
         image_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
-        image_description = st.text_area("Describe what this image teaches (optional but recommended)")
+        image_description = st.text_area("Describe what this image teaches (required)")
         if image_file is not None:
             st.image(image_file, caption="Uploaded Image", width=200)
             if st.button("Train with this image", use_container_width=True):
@@ -282,8 +257,6 @@ def main_app():
     # --- Show trained facts count ---
     st.markdown("---")
     st.markdown(f"### 📊 Knowledge Base: {len(st.session_state.training_data)} facts trained")
-
-    # --- Reset conversation button ---
     if st.button("Clear Chat History", use_container_width=True):
         st.session_state.conversation_history = []
         st.rerun()
