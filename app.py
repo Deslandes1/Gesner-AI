@@ -52,7 +52,7 @@ LANGUAGES = {
     "Kreyòl Ayisyen": "ht"
 }
 
-# ---------- FULL TEXTS DICTIONARY (from original code) ----------
+# ---------- FULL TEXTS DICTIONARY ----------
 TEXTS = {
     "en": {
         "training_app_title": "🧠 Gesner AI – Training Center",
@@ -365,7 +365,7 @@ TEXTS = {
     }
 }
 
-# ---------- CSS ----------
+# ---------- CSS (unchanged) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -447,7 +447,6 @@ if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def normalize_text(text: str) -> str:
-    """Lowercase, strip, collapse multiple spaces."""
     text = text.strip().lower()
     return re.sub(r'\s+', ' ', text)
 
@@ -470,8 +469,6 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Returns HTML for a button that plays the user's pre-recorded voice.
-       If no voice file exists, returns an empty string (no button)."""
     voice_bytes = get_voice_for_text(text)
     if not voice_bytes:
         return ""
@@ -678,54 +675,69 @@ def save_encyclopedia():
     with open("encyclopedia.json", "w") as f:
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
+# ========== FIXED VOICE TRAINING (recorder + upload) ==========
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    recorder_html = f"""
-    <div id="recorder-container">
-        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">{t['record_btn']}</button>
-        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px;">{t['stop_btn']}</button>
-        <p id="recordingStatus"></p>
-        <audio id="audioPlayback" controls style="width:100%; margin-top:10px;"></audio>
-        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">{t['download_btn']}</a>
+    
+    # Simple but reliable HTML5 recorder that saves a WAV file for download
+    recorder_html = """
+    <div id="record-container">
+        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">🔴 Record</button>
+        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px;">⏹️ Stop</button>
+        <p id="status"></p>
+        <audio id="playback" controls style="width:100%; margin-top:10px;"></audio>
+        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">💾 Download</a>
     </div>
     <script>
-        let mediaRecorder; let audioChunks = [];
-        const recordBtn = document.getElementById('recordBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const statusP = document.getElementById('recordingStatus');
-        const audioPlayback = document.getElementById('audioPlayback');
-        const downloadLink = document.getElementById('downloadLink');
-        recordBtn.onclick = async () => {{
-            const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = () => {{
-                const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
-                const audioUrl = URL.createObjectURL(audioBlob);
-                audioPlayback.src = audioUrl;
-                downloadLink.href = audioUrl;
-                downloadLink.download = 'recording.wav';
-                downloadLink.style.display = 'block';
-                audioChunks = [];
-                statusP.innerText = '';
-            }};
-            mediaRecorder.start();
-            recordBtn.disabled = true;
-            stopBtn.disabled = false;
-            statusP.innerText = 'Recording...';
-        }};
-        stopBtn.onclick = () => {{
-            mediaRecorder.stop();
-            recordBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusP.innerText = 'Stopped. You can download and upload below.';
-        }};
+        (function() {
+            let mediaRecorder;
+            let audioChunks = [];
+            const recordBtn = document.getElementById('recordBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const statusP = document.getElementById('status');
+            const playback = document.getElementById('playback');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            recordBtn.onclick = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        playback.src = audioUrl;
+                        downloadLink.href = audioUrl;
+                        downloadLink.download = 'recording.wav';
+                        downloadLink.style.display = 'block';
+                        audioChunks = [];
+                        statusP.innerText = 'Recording saved. Click Download to save file, then upload below.';
+                    };
+                    mediaRecorder.start();
+                    recordBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    statusP.innerText = 'Recording...';
+                } catch (err) {
+                    statusP.innerText = 'Error: ' + err.message;
+                }
+            };
+            stopBtn.onclick = () => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    recordBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            };
+        })();
     </script>
     """
-    st.html(recorder_html)  # replaced deprecated st.components.v1.html
+    st.html(recorder_html)
+    st.info("📌 After recording, click **Download** to save the file, then upload it below.")
+    
     st.markdown(f"### 📂 {t['voice_upload']}")
-    uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload")
-    transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript")
+    uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload_fixed")
+    transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript_fixed")
+    
     if uploaded_file and transcript.strip():
         if st.button(t['voice_train'], use_container_width=True):
             audio_bytes = uploaded_file.read()
@@ -734,6 +746,7 @@ def voice_training(t):
             add_to_training(transcript.strip(), t)
             st.success(t['voice_success'])
 
+# ---------- OTHER FUNCTIONS (translation, encyclopedia, test, chat, training) ----------
 def translation_correction(t):
     st.markdown(f"## {t['translation_title']}")
     source = st.text_area(t['translation_source_text'], height=100)
