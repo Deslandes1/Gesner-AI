@@ -4,12 +4,10 @@ import os
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
-from PIL import Image
-import requests
 import base64
-import time
 import hashlib
 
+# ---------- CONFIG ----------
 st.set_page_config(
     page_title="Gesner AI",
     page_icon="🧠",
@@ -91,11 +89,11 @@ st.markdown("""
 <style>
     .stApp { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
     .stMarkdown, h1, h2, h3, p, label { color: #ffffff !important; }
-    .stButton button { background-color: #e94560 !important; color: white !important; border-radius: 20px; }
+    .stButton button { background-color: #e94560 !important; color: white !important; border-radius: 20px; border: none; }
     .chat-bubble { padding: 15px; border-radius: 15px; margin-bottom: 10px; color: white; }
     .user-bubble { background: #e94560; }
     .assistant-bubble { background: #0f3460; border-left: 5px solid #e94560; }
-    .speak-btn { background-color: #ffa500; border: none; border-radius: 50%; padding: 10px; cursor: pointer; }
+    .speak-btn { background-color: #ffa500; border: none; border-radius: 50%; padding: 8px 12px; cursor: pointer; color: white; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -134,13 +132,13 @@ def get_voice_html(text, key):
         with open(filename, "rb") as f:
             data = base64.b64encode(f.read()).decode()
         return f"""
-        <button class="speak-btn" onclick="document.getElementById('audio_{key}').play()">🔊</button>
+        <button class="speak-btn" onclick="document.getElementById('audio_{key}').play()">🔊 Jwe Vwa</button>
         <audio id="audio_{key}" src="data:audio/wav;base64,{data}"></audio>
         """
     return ""
 
 # ---------- AI LOGIC ----------
-def add_to_training(text, t):
+def add_to_training(text, t_dict):
     if not text.strip(): return
     emb = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": emb.tolist()})
@@ -150,7 +148,7 @@ def add_to_training(text, t):
     st.session_state.texts.append(text)
     with open("training_data.json", "w") as f:
         json.dump(st.session_state.training_data, f)
-    st.success(t["training_success"].format(text=text[:30]))
+    st.success(t_dict["training_success"].format(text=text[:30]))
 
 def load_training():
     if os.path.exists("training_data.json") and not st.session_state.texts:
@@ -187,19 +185,29 @@ else:
 
     if st.session_state.chat_mode:
         st.title(t["chat_title"])
+        # This is the text for your specific voice recording
         intro_text = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
         
+        # DISPLAY CHAT
         for i, chat in enumerate(st.session_state.conversation_history):
-            st.markdown(f'<div class="chat-bubble user-bubble">{t["user_prefix"]} {chat["user"]}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="chat-bubble assistant-bubble">{t["assistant_prefix"]} {chat["assistant"]} <br><br><i>{intro_text}</i></div>', unsafe_allow_html=True)
+            # Using .get() prevents KeyError if for some reason keys are missing
+            u_msg = chat.get("user_msg", "")
+            a_msg = chat.get("ast_msg", "")
+            
+            st.markdown(f'<div class="chat-bubble user-bubble">{t["user_prefix"]} {u_msg}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chat-bubble assistant-bubble">{t["assistant_prefix"]} {a_msg} <br><br><i>{intro_text}</i></div>', unsafe_allow_html=True)
+            
+            # Show the voice button for your specific recording
             st.components.v1.html(get_voice_html(intro_text, i), height=50)
 
+        # INPUT AREA
         with st.form("chat_form", clear_on_submit=True):
             user_in = st.text_input(t["chat_input_placeholder"])
             if st.form_submit_button(t["send_button"]):
                 if user_in:
                     ans = get_response(user_in)
-                    st.session_state.conversation_history.append({"user": user_in, "assistant": ans})
+                    # We use unique keys 'user_msg' and 'ast_msg'
+                    st.session_state.conversation_history.append({"user_msg": user_in, "ast_msg": ans})
                     st.rerun()
     else:
         st.title(t["training_app_title"])
