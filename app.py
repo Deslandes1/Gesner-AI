@@ -747,7 +747,7 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
-# ---------- TEST TRAINING SECTION (with own voice upload) ----------
+# ---------- TEST TRAINING SECTION (fixed for own voice playback) ----------
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
     test_question = st.text_input(t['test_question'], key="test_question")
@@ -758,6 +758,8 @@ def test_training(t):
                 st.session_state.test_answer = facts[0]
             else:
                 st.session_state.test_answer = t["no_facts_answer"].format(question=test_question)
+            if "user_voice_bytes" in st.session_state:
+                del st.session_state.user_voice_bytes
             st.rerun()
     if "test_answer" in st.session_state:
         st.markdown(f"**{t['test_answer_label']}**")
@@ -769,27 +771,48 @@ def test_training(t):
             st.session_state.user_voice_bytes = uploaded_voice.read()
             st.success("Voice recording loaded. Click the button below to play it.")
         
-        # Speak button: if custom voice is uploaded, play that; else use speech synthesis
-        speak_button_html = f"""
-        <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
-        <script>
-            let userVoiceBlob = null;
-            {"userVoiceBlob = new Blob([" + str(st.session_state.get("user_voice_bytes", b"")) + "], {type: 'audio/wav'});" if st.session_state.get("user_voice_bytes") else ""}
-            document.getElementById('speakAnswerBtn').onclick = () => {{
-                if (userVoiceBlob) {{
-                    const audioUrl = URL.createObjectURL(userVoiceBlob);
-                    const audio = new Audio(audioUrl);
+        if st.session_state.get("user_voice_bytes"):
+            # Convert bytes to base64 for embedding in HTML
+            audio_b64 = base64.b64encode(st.session_state.user_voice_bytes).decode()
+            # Determine mime type from uploaded file name? We'll assume WAV for simplicity; but better to get extension.
+            # We'll use the file extension from the uploaded file if available, or default to audio/wav.
+            mime_type = "audio/wav"
+            if uploaded_voice and uploaded_voice.name.endswith('.mp3'):
+                mime_type = "audio/mpeg"
+            play_button_html = f"""
+            <button id="speakOwnVoiceBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
+            <audio id="customAudio" style="display:none;"></audio>
+            <script>
+                const audioData = "{audio_b64}";
+                const binaryStr = atob(audioData);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {{
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }}
+                const audioBlob = new Blob([bytes], {{ type: '{mime_type}' }});
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = document.getElementById('customAudio');
+                audio.src = audioUrl;
+                document.getElementById('speakOwnVoiceBtn').onclick = () => {{
                     audio.play();
-                }} else {{
+                }};
+            </script>
+            """
+            st.components.v1.html(play_button_html, height=60)
+        else:
+            # Fallback to speech synthesis
+            speak_button_html = f"""
+            <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
+            <script>
+                document.getElementById('speakAnswerBtn').onclick = () => {{
                     const text = {json.dumps(st.session_state.test_answer)};
                     const utterance = new SpeechSynthesisUtterance(text);
                     window.speechSynthesis.cancel();
                     window.speechSynthesis.speak(utterance);
-                }}
-            }};
-        </script>
-        """
-        st.components.v1.html(speak_button_html, height=50)
+                }};
+            </script>
+            """
+            st.components.v1.html(speak_button_html, height=50)
 
 # ---------- MAIN APP ----------
 def main_app():
