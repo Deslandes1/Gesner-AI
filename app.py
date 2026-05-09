@@ -118,7 +118,7 @@ TEXTS = {
         "test_answer_label": "Stored fact:",
         "test_speak_button": "🔊 Speak",
         "upload_voice_label": "Upload your voice for this exact text",
-        "chat_mode_title": "Gemini‑style Chat",
+        "chat_mode_title": "💬 Gesner AI Chat",
         "chat_mode_placeholder": "Ask me anything...",
         "chat_speak_button": "🔊",
         "chat_upload_voice": "Upload voice for this answer",
@@ -221,7 +221,7 @@ TEXTS = {
         "test_answer_label": "Fait stocké :",
         "test_speak_button": "🔊 Lire",
         "upload_voice_label": "Téléchargez votre voix pour ce texte exact",
-        "chat_mode_title": "Chat style Gemini",
+        "chat_mode_title": "💬 Gesner IA Chat",
         "chat_mode_placeholder": "Demandez‑moi n'importe quoi...",
         "chat_speak_button": "🔊",
         "chat_upload_voice": "Téléchargez votre voix pour cette réponse",
@@ -324,7 +324,7 @@ TEXTS = {
         "test_answer_label": "Reyalite ki sove :",
         "test_speak_button": "🔊 Pwononse",
         "upload_voice_label": "Chaje vwa ou pou tèks egzak sa a",
-        "chat_mode_title": "Chat style Gemini",
+        "chat_mode_title": "💬 Gesner AI Chat",
         "chat_mode_placeholder": "Pose yon kesyon...",
         "chat_speak_button": "🔊",
         "chat_upload_voice": "Chaje vwa ou pou repons sa a",
@@ -335,7 +335,7 @@ TEXTS = {
     }
 }
 
-# ---------- CSS (same as before, plus button for speak) ----------
+# ---------- CSS (ensures all text is bright white) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -413,6 +413,13 @@ st.markdown("""
     .stSelectbox label {
         color: white !important;
     }
+    /* Force all text white */
+    .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
+    .stFileUploader label, .stButton button, .stCaption, .stMetric label,
+    .stExpander, .stExpander summary, .stExpander p, .stExpander div,
+    h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer {
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -433,15 +440,13 @@ if "language" not in st.session_state:
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 
-# Voice cache directory
+# ---------- VOICE CACHE ----------
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def get_voice_filename(text):
-    """Generate a filename from the exact text (normalized)."""
     norm = text.strip().lower()
-    # remove punctuation, spaces -> simple hash
     h = hashlib.md5(norm.encode()).hexdigest()
     return os.path.join(VOICE_CACHE_DIR, f"{h}.wav")
 
@@ -459,11 +464,10 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Return an HTML/JS button that plays the voice if available, else falls back to TTS."""
     voice_bytes = get_voice_for_text(text)
     if voice_bytes:
         audio_b64 = base64.b64encode(voice_bytes).decode()
-        mime = "audio/wav"  # assuming we saved as wav
+        mime = "audio/wav"
         html = f"""
         <button class="speak-btn" id="customVoiceBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
         <audio id="customAudio_{key_suffix}" style="display:none;"></audio>
@@ -481,7 +485,6 @@ def play_voice_button(text, button_label="🔊", key_suffix=""):
         """
         return html
     else:
-        # Fallback to browser TTS
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
@@ -495,7 +498,7 @@ def play_voice_button(text, button_label="🔊", key_suffix=""):
         """
         return html
 
-# ---------- TRAINING FUNCTIONS (unchanged) ----------
+# ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text, t):
     if not text.strip():
         st.warning(t['warning_no_text'])
@@ -524,7 +527,7 @@ def load_previous_training():
             st.session_state.index.add(np.array(embeddings))
             st.session_state.texts = [item["text"] for item in data]
 
-# Pre‑train intro text if not present
+# Pre‑train intro text
 intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
 if intro_text_ht not in st.session_state.texts:
     embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
@@ -557,6 +560,7 @@ def generate_response(user_input):
     else:
         return t["no_facts_answer"]
 
+# ---------- LOGIN PAGE ----------
 def login_page():
     t = TEXTS[st.session_state.language]
     st.markdown(f"""
@@ -575,6 +579,7 @@ def login_page():
             st.error(t['wrong_password'])
     st.markdown("</div></div>", unsafe_allow_html=True)
 
+# ---------- SIDEBAR ----------
 def show_sidebar():
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names)
@@ -598,7 +603,6 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
-    # Toggle Chat Mode
     chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
@@ -661,6 +665,7 @@ def dictionary_manager(t):
                 save_dictionaries()
                 st.rerun()
 
+# ---------- VOICE TRAINING ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
     recorder_html = f"""
@@ -783,7 +788,6 @@ def test_training(t):
     if "test_answer" in st.session_state:
         st.markdown(f"**{t['test_answer_label']}**")
         st.markdown(f'<div style="background:#0f3460; padding:10px; border-radius:12px;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
-        # Voice upload for this exact text
         voice_up = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice")
         if voice_up:
             save_voice_for_text(st.session_state.test_answer, voice_up.read())
@@ -799,20 +803,16 @@ def chat_mode_interface():
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
     
-    # Display conversation
     for idx, msg in enumerate(st.session_state.chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
         else:
-            # Assistant message with speak button
             col1, col2 = st.columns([10, 1])
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                # Add speak button for this specific answer
                 st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
     
-    # Input area
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
         if user_input.strip():
@@ -821,7 +821,6 @@ def chat_mode_interface():
             st.session_state.chat_messages.append({"role": "assistant", "content": answer})
             st.rerun()
     
-    # Image upload for description
     st.markdown("---")
     st.markdown(f"## 🖼️ {t['image_title']}")
     img_file = st.file_uploader(t['image_upload_label'], type=["jpg", "jpeg", "png"], key="chat_image_upload")
@@ -829,15 +828,12 @@ def chat_mode_interface():
         img = Image.open(img_file)
         st.image(img, caption=t['image_caption'], width=300)
         if st.button(t['image_describe_button'], use_container_width=True):
-            # Simple placeholder description. Replace with a real model if desired.
-            description = f"This image shows a {img_file.name}. (Replace with actual image captioning model.)"
+            description = f"This image shows {img_file.name}. (Replace with a real image captioning model.)"
             st.session_state.img_description = description
             st.markdown(f"**{t['image_description_result']}** {description}")
-            # Option to train this description
             if st.button("Train this description", use_container_width=True):
                 add_to_training(description, t)
                 st.success("Description added to knowledge.")
-            # Voice upload for this description
             desc_voice = st.file_uploader("Upload voice for this description (WAV/MP3)", type=["wav", "mp3"], key="desc_voice_upload")
             if desc_voice:
                 save_voice_for_text(description, desc_voice.read())
@@ -856,7 +852,6 @@ def training_mode():
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
-    # Chat interface (original)
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -921,8 +916,6 @@ def training_mode():
 
 # ---------- MAIN ----------
 def main_app():
-    t = TEXTS[st.session_state.language]
-    show_sidebar()
     load_previous_training()
     
     if st.session_state.chat_mode:
@@ -930,6 +923,7 @@ def main_app():
     else:
         training_mode()
     
+    t = TEXTS[st.session_state.language]
     st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
 
 # ---------- ROUTING ----------
