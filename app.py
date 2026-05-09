@@ -345,6 +345,11 @@ st.markdown("""
         background: linear-gradient(180deg, #0f3460 0%, #1a1a2e 100%);
         border-right: 2px solid #e94560;
     }
+    /* Force all text to bright white */
+    .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
+    .stFileUploader label, .stButton button, .stCaption, .stMetric label,
+    .stExpander, .stExpander summary, .stExpander p, .stExpander div,
+    h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer,
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
@@ -401,24 +406,8 @@ st.markdown("""
         padding: 1rem;
         border-top: 1px solid #e94560;
     }
-    .stExpander, .stExpander summary, .stExpander p {
-        color: white !important;
-    }
     .stExpanderHeader {
         background-color: rgba(15,52,96,0.8) !important;
-    }
-    .stFileUploader label {
-        color: white !important;
-    }
-    .stSelectbox label {
-        color: white !important;
-    }
-    /* Force all text white everywhere */
-    .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
-    .stFileUploader label, .stButton button, .stCaption, .stMetric label,
-    .stExpander, .stExpander summary, .stExpander p, .stExpander div,
-    h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer {
-        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -440,12 +429,13 @@ if "language" not in st.session_state:
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 
-# ---------- VOICE CACHE (persistent across sessions) ----------
+# Voice cache directory
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def get_voice_filename(text):
+    """Generate a filename from the exact text (normalized)."""
     norm = text.strip().lower()
     h = hashlib.md5(norm.encode()).hexdigest()
     return os.path.join(VOICE_CACHE_DIR, f"{h}.wav")
@@ -464,6 +454,7 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
+    """Return an HTML/JS button that plays the voice if available, else falls back to TTS."""
     voice_bytes = get_voice_for_text(text)
     if voice_bytes:
         audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -527,7 +518,7 @@ def load_previous_training():
             st.session_state.index.add(np.array(embeddings))
             st.session_state.texts = [item["text"] for item in data]
 
-# Pre‑train the intro text
+# Pre‑train intro text
 intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
 if intro_text_ht not in st.session_state.texts:
     embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
@@ -560,7 +551,6 @@ def generate_response(user_input):
     else:
         return t["no_facts_answer"]
 
-# ---------- LOGIN PAGE ----------
 def login_page():
     t = TEXTS[st.session_state.language]
     st.markdown(f"""
@@ -579,7 +569,6 @@ def login_page():
             st.error(t['wrong_password'])
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ---------- SIDEBAR ----------
 def show_sidebar():
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names)
@@ -603,6 +592,7 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
+    # Toggle Chat Mode
     chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
@@ -622,7 +612,6 @@ def dictionary_manager(t):
         m = st.text_input(f"{t['dict_meaning']} (HT)", key="ht_meaning")
         if st.button(t['dict_add'], key="add_ht"):
             if w and m:
-                # Assumes dictionaries are stored in session_state
                 st.session_state.dictionaries["ht"][w] = m
                 save_dictionaries()
                 st.success(f"Added {w}")
@@ -666,10 +655,8 @@ def dictionary_manager(t):
                 save_dictionaries()
                 st.rerun()
 
-# ---------- VOICE TRAINING (uses voice cache) ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    # simple recording code (same as before)
     recorder_html = f"""
     <div id="recorder-container">
         <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">{t['record_btn']}</button>
@@ -723,7 +710,6 @@ def voice_training(t):
             add_to_training(transcript.strip(), t)
             st.success(t['voice_success'])
 
-# ---------- TRANSLATION & CORRECTION ----------
 def translation_correction(t):
     st.markdown(f"## {t['translation_title']}")
     source = st.text_area(t['translation_source_text'], height=100)
@@ -750,7 +736,6 @@ def translation_correction(t):
             else:
                 st.warning(t['warning_no_text'])
 
-# ---------- ENCYCLOPEDIA MANAGER ----------
 def encyclopedia_manager(t):
     st.markdown(f"## {t['encyclopedia_title']}")
     with st.expander(t['encyclopedia_add']):
@@ -778,7 +763,6 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
-# ---------- TEST TRAINING (with voice upload) ----------
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
     q = st.text_input(t['test_question'])
@@ -800,7 +784,7 @@ def test_training(t):
             st.rerun()
         st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
 
-# ---------- CHAT MODE (clean interface, uses voice cache) ----------
+# ---------- CHAT MODE (clean interface) ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -833,7 +817,7 @@ def chat_mode_interface():
         img = Image.open(img_file)
         st.image(img, caption=t['image_caption'], width=300)
         if st.button(t['image_describe_button'], use_container_width=True):
-            description = f"This image shows {img_file.name}. (For a real image captioning model, replace this text.)"
+            description = f"This image shows a {img_file.name}. (Replace with actual image captioning model.)"
             st.session_state.img_description = description
             st.markdown(f"**{t['image_description_result']}** {description}")
             if st.button("Train this description", use_container_width=True):
@@ -919,7 +903,7 @@ def training_mode():
         st.session_state.conversation_history = []
         st.rerun()
 
-# ---------- MAIN APP ----------
+# ---------- MAIN ----------
 def main_app():
     load_previous_training()
     
