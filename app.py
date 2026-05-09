@@ -9,6 +9,11 @@ import requests
 import base64
 import time
 import hashlib
+from langdetect import detect, DetectorFactory
+from langdetect.lang_detect_exception import LangDetectException
+
+# Seed for consistent language detection
+DetectorFactory.seed = 0
 
 st.set_page_config(
     page_title="Gesner AI",
@@ -24,6 +29,7 @@ LANGUAGES = {
     "Español": "es"
 }
 
+# UI texts – only used for interface translation, NOT for chat
 TEXTS = {
     "en": {
         "training_app_title": "🧠 Gesner AI – Training Center",
@@ -527,8 +533,6 @@ if "embedding_model" not in st.session_state:
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     st.session_state.index = None
     st.session_state.texts = []
-if "language" not in st.session_state:
-    st.session_state.language = "en"
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 if "dictionaries" not in st.session_state:
@@ -561,13 +565,23 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Returns HTML+JS for a button that plays audio.
-       For Kreyòl: uses recorded voice if exists, otherwise uses TTS (French voice as fallback).
-       For other languages: uses TTS in that language."""
-    lang = st.session_state.language
-    # For Kreyòl, try recorded voice first
-    if lang == "ht":
+def detect_language(text):
+    """Detect language of user input. Returns 'ht' for Haitian Creole if not English/French/Spanish."""
+    try:
+        lang = detect(text)
+        if lang in ['en', 'fr', 'es']:
+            return lang
+        else:
+            # Anything else (including 'ht') we treat as Haitian Creole
+            return 'ht'
+    except LangDetectException:
+        # If detection fails, assume Kreyòl
+        return 'ht'
+
+def play_voice_button(text, response_lang, button_label="🔊", key_suffix=""):
+    """Generate audio button based on response language and whether a recorded voice exists for Kreyòl."""
+    # For Kreyòl: if recorded voice exists, play it; otherwise no button (text only)
+    if response_lang == "ht":
         voice_bytes = get_voice_for_text(text)
         if voice_bytes:
             audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -591,29 +605,16 @@ def play_voice_button(text, button_label="🔊", key_suffix=""):
             """
             return html
         else:
-            # No recorded voice – fallback to TTS (French voice as it's the closest available)
-            tts_lang = "fr-FR"
-            safe_text = json.dumps(text)
-            html = f"""
-            <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
-            <script>
-                document.getElementById('ttsBtn_{key_suffix}').onclick = () => {{
-                    const utterance = new SpeechSynthesisUtterance({safe_text});
-                    utterance.lang = '{tts_lang}';
-                    window.speechSynthesis.cancel();
-                    window.speechSynthesis.speak(utterance);
-                }};
-            </script>
-            """
-            return html
+            # No recorded voice for Kreyòl → no button
+            return ""
     else:
-        # For English, French, Spanish – use TTS with correct language code
+        # For English, French, Spanish → TTS
         lang_map = {
             "en": "en-US",
             "fr": "fr-FR",
             "es": "es-ES"
         }
-        tts_lang = lang_map.get(lang, "en-US")
+        tts_lang = lang_map.get(response_lang, "en-US")
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
@@ -687,21 +688,36 @@ def retrieve_relevant_facts(query, k=1, threshold=1.2):
             results.append(st.session_state.texts[idx])
     return results
 
-def generate_response(user_input):
+def generate_response(user_input, response_lang):
+    """Generate response in the specified language (based on user input)."""
     facts = retrieve_relevant_facts(user_input, k=1)
-    t = TEXTS[st.session_state.language]
     if facts:
         return facts[0]
     else:
-        return t["no_facts_answer"]
+        # Fallback: use the appropriate "no_facts_answer" for the response language
+        # For Kreyòl fallback, we use French text (as per requirement)
+        if response_lang == "ht":
+            # Kreyòl question without answer → French reply
+            return "Désolé, je n'ai pas encore la réponse. Pouvez-vous reformuler votre question ?"
+        else:
+            # English, French, Spanish fallback in their own language
+            if response_lang == "en":
+                return "I don't understand. Could you rephrase your question?"
+            elif response_lang == "fr":
+                return "Je ne comprends pas. Pouvez-vous reformuler votre question ?"
+            elif response_lang == "es":
+                return "No entiendo. ¿Podrías reformular tu pregunta?"
+            else:
+                return "I don't understand. Could you rephrase your question?"
 
 def login_page():
-    t = TEXTS[st.session_state.language]
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS[ui_lang]
     st.markdown(f"""
     <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="login-card" style="background: rgba(15,52,96,0.8); backdrop-filter: blur(12px); border-radius: 30px; padding: 2rem; text-align: center; border: 1px solid #e94560; width: 100%; max-width: 450px; margin: auto;">
             <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">Gesner AI</div>
+            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">{t['login_title']}</div>
             <p style="color:white;">{t['login_message']}</p>
     """, unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="login_pass")
@@ -714,10 +730,11 @@ def login_page():
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 def show_sidebar():
+    # UI language selection – only affects interface texts, NOT chat language
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names)
-    st.session_state.language = LANGUAGES[selected_lang_name]
-    t = TEXTS[st.session_state.language]
+    selected_lang_name = st.sidebar.selectbox("🌐 Interface Language", lang_names, key="ui_lang_selector")
+    st.session_state.ui_language = LANGUAGES[selected_lang_name]
+    t = TEXTS[st.session_state.ui_language]
 
     st.sidebar.markdown("""
     <div style="text-align: center;">
@@ -736,7 +753,7 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
-    chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
+    chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode, key="chat_mode_toggle")
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
         st.rerun()
@@ -802,20 +819,13 @@ def save_dictionaries():
     with open("dictionaries.json", "w") as f:
         json.dump(st.session_state.dictionaries, f, indent=2)
 
-def save_audio_transcriptions():
-    with open("audio_transcriptions.json", "w") as f:
-        json.dump(st.session_state.audio_transcriptions, f, indent=2)
-
 def save_encyclopedia():
     with open("encyclopedia.json", "w") as f:
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    if st.session_state.language == "ht":
-        st.info("🎙️ For Kreyòl Ayisyen, you can upload your voice. It will be used when this text is spoken. If no voice is uploaded, the AI will use French‑accented TTS as a fallback.")
-    else:
-        st.info("ℹ️ Voice training is only available for Kreyòl Ayisyen. For other languages, the AI automatically uses browser speech synthesis.")
+    st.info("🎙️ You can upload your voice for Kreyòl phrases. It will be used when Gesner AI answers that exact text in Kreyòl. For other languages, the AI will use built‑in text‑to‑speech.")
     
     recorder_html = f"""
     <div id="recorder-container">
@@ -928,27 +938,33 @@ def test_training(t):
     q = st.text_input(t['test_question'])
     if st.button(t['test_button'], use_container_width=True):
         if q.strip():
-            facts = retrieve_relevant_facts(q, k=1)
-            if facts:
-                st.session_state.test_answer = facts[0]
-            else:
-                st.session_state.test_answer = generate_response(q)
+            # Detect language of the question
+            lang = detect_language(q)
+            answer = generate_response(q, lang)
+            st.session_state.test_answer = answer
+            st.session_state.test_answer_lang = lang
             st.rerun()
     if "test_answer" in st.session_state:
         st.markdown(f"**{t['test_answer_label']}**")
         st.markdown(f'<div style="background:#0f3460; padding:10px; border-radius:12px;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
-        # Only show voice upload for Kreyòl
-        if st.session_state.language == "ht":
+        # Voice upload only for Kreyòl
+        if st.session_state.test_answer_lang == "ht":
             voice_up = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice")
             if voice_up:
                 save_voice_for_text(st.session_state.test_answer, voice_up.read())
                 st.success("Voice saved")
                 st.rerun()
-        st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
+        # Play button
+        btn_html = play_voice_button(st.session_state.test_answer, st.session_state.test_answer_lang, t['test_speak_button'], "test")
+        if btn_html:
+            st.components.v1.html(btn_html, height=50)
+        elif st.session_state.test_answer_lang == "ht":
+            st.info("No voice recorded for this answer. You can upload your voice above.")
 
 # ---------- GESNER AI CHAT MODE ----------
 def chat_mode_interface():
-    t = TEXTS[st.session_state.language]
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS[ui_lang]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
     
     if "chat_messages" not in st.session_state:
@@ -962,23 +978,28 @@ def chat_mode_interface():
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
+                btn_html = play_voice_button(msg["content"], msg["lang"], t['chat_speak_button'], f"chat_{idx}")
+                if btn_html:
+                    st.components.v1.html(btn_html, height=50)
     
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
         if user_input.strip():
-            answer = generate_response(user_input)
-            st.session_state.chat_messages.append({"role": "user", "content": user_input})
-            st.session_state.chat_messages.append({"role": "assistant", "content": answer})
+            # Detect language and generate response
+            input_lang = detect_language(user_input)
+            answer = generate_response(user_input, input_lang)
+            st.session_state.chat_messages.append({"role": "user", "content": user_input, "lang": input_lang})
+            st.session_state.chat_messages.append({"role": "assistant", "content": answer, "lang": input_lang})
             st.rerun()
     
     if st.button("Clear Chat", use_container_width=True, key="clear_chat_new"):
         st.session_state.chat_messages = []
         st.rerun()
 
-# ---------- TRAINING MODE ----------
+# ---------- TRAINING MODE (full dashboard) ----------
 def training_mode():
-    t = TEXTS[st.session_state.language]
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS[ui_lang]
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
@@ -999,8 +1020,9 @@ def training_mode():
     user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
     if st.button(t["send_button"], use_container_width=True):
         if user_input.strip():
+            input_lang = detect_language(user_input)
+            response = generate_response(user_input, input_lang)
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
-            response = generate_response(user_input)
             st.session_state.conversation_history.append({"role": "assistant", "content": response})
             st.rerun()
     
@@ -1059,14 +1081,19 @@ def main_app():
         chat_mode_interface()
     else:
         training_mode()
-    t = TEXTS[st.session_state.language]
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS[ui_lang]
     st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
 
 # ---------- ROUTING ----------
+if "ui_language" not in st.session_state:
+    st.session_state.ui_language = "en"  # default UI language
+
 if not st.session_state.authenticated:
+    # On login page, also show language selector for UI
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang")
-    st.session_state.language = LANGUAGES[selected_lang_name]
+    selected_lang_name = st.selectbox("🌐 Interface Language", lang_names, key="login_ui_lang")
+    st.session_state.ui_language = LANGUAGES[selected_lang_name]
     login_page()
 else:
     main_app()
