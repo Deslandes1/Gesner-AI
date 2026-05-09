@@ -73,7 +73,7 @@ TEXTS = {
 | **Enterprise / Source** | $999 |
 """,
         "logout_button": "🔓 Logout",
-        "no_facts_answer": "I don't know that yet. Please teach me in Training Mode!",
+        "no_facts_answer": "I don't understand. Could you rephrase your question?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Trained: {text}...",
         "warning_no_text": "Please enter some text.",
@@ -176,7 +176,7 @@ TEXTS = {
 | **Entreprise / Code source** | 999 $ |
 """,
         "logout_button": "🔓 Déconnexion",
-        "no_facts_answer": "Je ne connais pas encore cela. Enseignez‑moi en mode Entraînement !",
+        "no_facts_answer": "Je ne comprends pas. Pouvez-vous reformuler votre question ?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Entraîné : {text}...",
         "warning_no_text": "Veuillez saisir du texte.",
@@ -279,7 +279,7 @@ TEXTS = {
 | **Antrepriz / Kòd sous** | $999 |
 """,
         "logout_button": "🔓 Dekonekte",
-        "no_facts_answer": "Mwen poko konnen sa. Tanpri anseye m nan Mòd Fòmasyon!",
+        "no_facts_answer": "Mwen pa konprann. Èske ou ka repete kesyon an yon lòt fason?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Antrene : {text}...",
         "warning_no_text": "Tanpri antre kèk tèks.",
@@ -542,17 +542,19 @@ if intro_text_ht not in st.session_state.texts:
     with open("training_data.json", "w") as f:
         json.dump(st.session_state.training_data, f, indent=2)
 
-def retrieve_relevant_facts(query, k=1):
+# ---------------- UPDATED retrieve_relevant_facts with threshold ----------------
+def retrieve_relevant_facts(query, k=1, threshold=1.2):
     if st.session_state.index is None or st.session_state.index.ntotal == 0:
         return []
     query_embedding = st.session_state.embedding_model.encode([query])[0].astype(np.float32).reshape(1, -1)
     distances, indices = st.session_state.index.search(query_embedding, k)
     results = []
-    for idx in indices[0]:
-        if idx != -1 and idx < len(st.session_state.texts):
+    for i, idx in enumerate(indices[0]):
+        if idx != -1 and idx < len(st.session_state.texts) and distances[0][i] < threshold:
             results.append(st.session_state.texts[idx])
     return results
 
+# ---------------- UPDATED generate_response (no bug report) ----------------
 def generate_response(user_input):
     facts = retrieve_relevant_facts(user_input, k=1)
     t = TEXTS[st.session_state.language]
