@@ -513,15 +513,20 @@ def add_to_training(text, t):
 
 def load_previous_training():
     if os.path.exists("training_data.json"):
-        with open("training_data.json", "r") as f:
-            data = json.load(f)
-        st.session_state.training_data = data
-        if data:
-            embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
-            dim = len(embeddings[0])
-            st.session_state.index = faiss.IndexFlatL2(dim)
-            st.session_state.index.add(np.array(embeddings))
-            st.session_state.texts = [item["text"] for item in data]
+        try:
+            with open("training_data.json", "r") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                st.session_state.training_data = data
+                if data:
+                    embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data if "embedding" in item]
+                    if embeddings:
+                        dim = len(embeddings[0])
+                        st.session_state.index = faiss.IndexFlatL2(dim)
+                        st.session_state.index.add(np.array(embeddings))
+                        st.session_state.texts = [item["text"] for item in data if "text" in item]
+        except Exception:
+            pass
 
 # Pre‑train intro text
 intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
@@ -836,6 +841,14 @@ def training_mode():
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
+    # --- Sanitize conversation history to avoid KeyError ---
+    clean_history = []
+    for msg in st.session_state.conversation_history:
+        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+            clean_history.append(msg)
+    st.session_state.conversation_history = clean_history
+    # --------------------------------------------------------
+    
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -901,6 +914,7 @@ def training_mode():
 # ---------- MAIN ----------
 def main_app():
     load_previous_training()
+    show_sidebar()  # <--- was missing! Show sidebar in both modes
     if st.session_state.chat_mode:
         chat_mode_interface()
     else:
