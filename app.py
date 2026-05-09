@@ -320,7 +320,7 @@ TEXTS = {
         "encyclopedia_save": "Sove antre a",
         "encyclopedia_list": "Antre ki egziste deja",
         "voice_download": "Telechaje anrejistreman an",
-        "test_title": "🧪 Tese fòmasyon ou",
+        "test_title": "🧪 Teste fòmasyon ou",
         "test_question": "Pose yon kesyon pou wè egzakteman sa m aprann epi tande l:",
         "test_button": "Mande Gesner AI",
         "test_answer_label": "Repons ki te jwenn (tèks egzak mwen aprann):",
@@ -491,7 +491,22 @@ def load_previous_training():
             st.session_state.index.add(np.array(embeddings))
             st.session_state.texts = [item["text"] for item in data]
 
-def retrieve_relevant_facts(query, k=3):
+# Pre‑train the introduction text (if not already present)
+intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+if intro_text_ht not in st.session_state.texts:
+    # Add it only once at startup
+    embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
+    st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
+    if st.session_state.index is None:
+        dim = len(embedding)
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.texts = []
+    st.session_state.index.add(np.array([embedding], dtype=np.float32))
+    st.session_state.texts.append(intro_text_ht)
+    with open("training_data.json", "w") as f:
+        json.dump(st.session_state.training_data, f, indent=2)
+
+def retrieve_relevant_facts(query, k=1):
     if st.session_state.index is None or st.session_state.index.ntotal == 0:
         return []
     query_embedding = st.session_state.embedding_model.encode([query])[0].astype(np.float32).reshape(1, -1)
@@ -503,10 +518,9 @@ def retrieve_relevant_facts(query, k=3):
     return results
 
 def generate_response(user_input):
-    facts = retrieve_relevant_facts(user_input, k=1)  # only top 1 for exact match
+    facts = retrieve_relevant_facts(user_input, k=1)
     t = TEXTS[st.session_state.language]
     if facts:
-        # return only the retrieved fact, no extra text
         return facts[0]
     else:
         return t["no_facts_answer"].format(question=user_input)
@@ -753,13 +767,16 @@ def test_training(t):
             document.getElementById('speakAnswerBtn').onclick = () => {{
                 const text = {json.dumps(st.session_state.test_answer)};
                 const utterance = new SpeechSynthesisUtterance(text);
-                // Try to use Haitian Creole voice if available
+                // Use a Haitian Creole voice if available (e.g., Google Kreyòl)
                 window.speechSynthesis.cancel();
                 window.speechSynthesis.speak(utterance);
             }};
         </script>
         """
         st.components.v1.html(speak_button_html, height=50)
+        # Optional: if the user has uploaded a custom voice file, play it here.
+        if os.path.exists("myvoice.wav"):
+            st.audio("myvoice.wav", format="audio/wav")
 
 # ---------- MAIN APP ----------
 def main_app():
@@ -770,7 +787,7 @@ def main_app():
     st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
 
-    # --- Chat Interface (existing) ---
+    # --- Chat Interface ---
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -819,7 +836,7 @@ def main_app():
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
 
-    # --- New Features: Dictionaries, Translation, Encyclopedia, Test ---
+    # --- New Features ---
     st.markdown("---")
     dictionary_manager(t)
     st.markdown("---")
