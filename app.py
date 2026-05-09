@@ -724,195 +724,69 @@ def voice_training(t):
             audio_bytes = uploaded_file.read()
             save_voice_for_text(transcript.strip(), audio_bytes)
             add_to_training(transcript.strip(), t)
-            st.success(t['voice_success'])
 
-def translation_correction(t):
-    st.markdown(f"## {t['translation_title']}")
-    source = st.text_area(t['translation_source_text'], height=100)
-    if st.button(t['translate_btn'], use_container_width=True):
-        if source.strip():
-            url = "https://api.mymemory.translated.net/get"
-            params = {"q": source, "langpair": "auto|ht"}
-            try:
-                r = requests.get(url, params=params, timeout=10)
-                res = r.json()
-                translated = res.get("responseData", {}).get("translatedText", "")
-                if translated:
-                    st.session_state.translated = translated
-                else:
-                    st.warning("Translation failed")
-            except Exception as e:
-                st.warning(f"Error: {e}")
-    if "translated" in st.session_state:
-        corrected = st.text_area(t['translation_result'], value=st.session_state.translated, height=100)
-        if st.button(t['train_translation_btn'], use_container_width=True):
-            if corrected.strip():
-                add_to_training(corrected, t)
-                st.success("Trained")
-            else:
-                st.warning(t['warning_no_text'])
-
-def encyclopedia_manager(t):
-    st.markdown(f"## {t['encyclopedia_title']}")
-    with st.expander(t['encyclopedia_add']):
-        title = st.text_input(t['encyclopedia_title_field'])
-        content = st.text_area(t['encyclopedia_content'], height=150)
-        lang = st.selectbox(t['encyclopedia_lang'], ["English", "Français", "Kreyòl Ayisyen", "Español"])
-        tags = st.text_input(t['encyclopedia_tags'])
-        if st.button(t['encyclopedia_save'], use_container_width=True):
-            if title and content:
-                entry = {"title": title, "content": content, "language": lang, "tags": [t.strip() for t in tags.split(",") if t.strip()], "timestamp": time.time()}
-                st.session_state.encyclopedia.append(entry)
-                save_encyclopedia()
-                add_to_training(f"{title}: {content}", t)
-                st.success(f"Added {title}")
-                st.rerun()
-            else:
-                st.warning("Title and content required.")
-    st.markdown(f"### {t['encyclopedia_list']}")
-    for entry in st.session_state.encyclopedia[-10:]:
-        with st.expander(f"{entry['title']} ({entry['language']})"):
-            st.markdown(f"**Content:** {entry['content']}")
-            st.markdown(f"**Tags:** {', '.join(entry['tags'])}")
-            if st.button(f"Delete '{entry['title']}'", key=f"del_enc_{entry['timestamp']}"):
-                st.session_state.encyclopedia.remove(entry)
-                save_encyclopedia()
-                st.rerun()
-
-def test_training(t):
-    st.markdown(f"## {t['test_title']}")
-    q = st.text_input(t['test_question'])
-    if st.button(t['test_button'], use_container_width=True):
-        if q.strip():
-            facts = retrieve_relevant_facts(q, k=1)
-            if facts:
-                st.session_state.test_answer = facts[0]
-            else:
-                st.session_state.test_answer = t["no_facts_answer"]
-            st.rerun()
-    if "test_answer" in st.session_state:
-        st.markdown(f"**{t['test_answer_label']}**")
-        st.markdown(f'<div style="background:#0f3460; padding:10px; border-radius:12px;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
-        voice_up = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice")
-        if voice_up:
-            save_voice_for_text(st.session_state.test_answer, voice_up.read())
-            st.success("Voice saved")
-            st.rerun()
-        st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
-
-# ---------- GESNER AI CHAT MODE (voice button visible) ----------
-def chat_mode_interface():
-    t = TEXTS[st.session_state.language]
-    st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
-    
-    if "chat_messages" not in st.session_state:
-        st.session_state.chat_messages = []
-    
-    for idx, msg in enumerate(st.session_state.chat_messages):
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            col1, col2 = st.columns([10, 1])
-            with col1:
-                st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
-            with col2:
-                st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
-    
-    user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
-    if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
-        if user_input.strip():
-            answer = generate_response(user_input)
-            st.session_state.chat_messages.append({"role": "user", "content": user_input})
-            st.session_state.chat_messages.append({"role": "assistant", "content": answer})
-            st.rerun()
-    
-    if st.button("Clear Chat", use_container_width=True, key="clear_chat_new"):
-        st.session_state.chat_messages = []
-        st.rerun()
-
-# ---------- TRAINING MODE (full dashboard) ----------
-def training_mode():
-    t = TEXTS[st.session_state.language]
-    st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
-    
-    st.markdown(f"## {t['chat_title']}")
-    for msg in st.session_state.conversation_history:
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
-    
-    user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
-    if st.button(t["send_button"], use_container_width=True):
-        if user_input.strip():
-            st.session_state.conversation_history.append({"role": "user", "content": user_input})
-            response = generate_response(user_input)
-            st.session_state.conversation_history.append({"role": "assistant", "content": response})
-            st.rerun()
-    
-    st.markdown("---")
-    st.markdown(f"## {t['training_text_title']}")
-    with st.expander(t["expand_text"]):
-        text = st.text_area(t["text_area_label"])
-        if st.button(t["train_text_button"], use_container_width=True):
-            add_to_training(text, t)
-    
-    st.markdown(f"## {t['audio_title']}")
-    with st.expander(t["expand_audio"]):
-        voice_training(t)
-    
-    st.markdown(f"## {t['image_title']}")
-    with st.expander(t["expand_image"]):
-        img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
-        desc = st.text_area(t["image_description_label"])
-        if img_file:
-            st.image(img_file, caption=t['image_caption'], width=200)
-            if st.button(t["train_image_button"], use_container_width=True):
-                if desc.strip():
-                    add_to_training(desc, t)
-                else:
-                    st.warning(t['warning_no_description'])
-    
-    st.markdown(f"## {t['file_title']}")
-    with st.expander(t["expand_file"]):
-        txt_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
-        if txt_file:
-            content = txt_file.read().decode("utf-8")
-            st.text_area(t['file_preview'], content, height=150)
-            if st.button(t["train_file_button"], use_container_width=True):
-                add_to_training(content, t)
-    
-    st.markdown("---")
-    dictionary_manager(t)
-    st.markdown("---")
-    translation_correction(t)
-    st.markdown("---")
-    encyclopedia_manager(t)
-    st.markdown("---")
-    test_training(t)
-    
-    st.markdown("---")
-    st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
-    if st.button(t["clear_chat_button"], use_container_width=True):
-        st.session_state.conversation_history = []
-        st.rerun()
-
-# ---------- MAIN ----------
-def main_app():
-    load_previous_training()
-    if st.session_state.chat_mode:
-        chat_mode_interface()
-    else:
-        training_mode()
-    t = TEXTS[st.session_state.language]
-    st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
-
-# ---------- ROUTING ----------
+# ---------- MAIN APP LOGIC ----------
 if not st.session_state.authenticated:
-    lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang")
-    st.session_state.language = LANGUAGES[selected_lang_name]
     login_page()
 else:
-    main_app()
+    load_previous_training()
+    show_sidebar()
+    t = TEXTS[st.session_state.language]
+    
+    if st.session_state.chat_mode:
+        st.markdown(f"## {t['chat_mode_title']}")
+        # Display conversation
+        for idx, chat in enumerate(st.session_state.conversation_history):
+            # User message
+            st.markdown(f"""
+            <div class="chat-message user-message">
+                <div>{t['user_prefix']} {chat['user']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            # Assistant message
+            st.markdown(f"""
+            <div class="chat-message assistant-message">
+                <div>{t['assistant_prefix']} {chat['assistant']}</div>
+                <div id="btn-container-{idx}"></div>
+            </div>
+            """, unsafe_allow_html=True)
+            # Add the specific ending and voice play button
+            final_text = f"{chat['assistant']} 🤖 Gesner AI: Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+            st.components.v1.html(play_voice_button(final_text, button_label="🔊", key_suffix=f"chat_{idx}"), height=50)
+
+        # Chat Input
+        with st.form("chat_form", clear_on_submit=True):
+            user_input = st.text_input(t['chat_mode_placeholder'])
+            cols = st.columns([4, 1])
+            submitted = cols[1].form_submit_button(t['send_button'])
+            if submitted and user_input:
+                response = generate_response(user_input)
+                st.session_state.conversation_history.append({"user": user_input, "assistant": response})
+                st.rerun()
+    else:
+        # Training Mode
+        st.title(t['training_app_title'])
+        st.markdown(f"### {t['training_subtitle']}")
+        
+        # Knowledge Base Info
+        st.info(t['knowledge_base'].format(count=len(st.session_state.texts)))
+        
+        # Sections for Training
+        with st.expander(t['expand_text']):
+            txt_input = st.text_area(t['text_area_label'])
+            if st.button(t['train_text_button']):
+                add_to_training(txt_input, t)
+        
+        with st.expander(t['audio_title']):
+            voice_training(t)
+
+        with st.expander(t['encyclopedia_title']):
+            # Encyclopedia Logic
+            e_title = st.text_input(t['encyclopedia_title_field'])
+            e_content = st.text_area(t['encyclopedia_content'])
+            if st.button(t['encyclopedia_save']):
+                if e_title and e_content:
+                    entry = f"Encyclopedia: {e_title} - {e_content}"
+                    add_to_training(entry, t)
+
+        dictionary_manager(t)
