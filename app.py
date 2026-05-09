@@ -458,41 +458,31 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
+    """Returns HTML+JS for a button that plays the user's pre-recorded voice for `text`.
+       If no voice file exists, returns an empty string (no button)."""
     voice_bytes = get_voice_for_text(text)
-    if voice_bytes:
-        audio_b64 = base64.b64encode(voice_bytes).decode()
-        mime = "audio/wav"
-        html = f"""
-        <button class="speak-btn" id="voiceBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
-        <audio id="customAudio_{key_suffix}" style="display:none;"></audio>
-        <script>
-            (function() {{
-                const audioData = "{audio_b64}";
-                const binaryStr = atob(audioData);
-                const bytes = new Uint8Array(binaryStr.length);
-                for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-                const audioBlob = new Blob([bytes], {{ type: '{mime}' }});
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audioEl = document.getElementById('customAudio_{key_suffix}');
-                audioEl.src = audioUrl;
-                document.getElementById('voiceBtn_{key_suffix}').onclick = () => audioEl.play();
-            }})();
-        </script>
-        """
-        return html
-    else:
-        safe_text = json.dumps(text)
-        html = f"""
-        <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
-        <script>
-            document.getElementById('ttsBtn_{key_suffix}').onclick = () => {{
-                const utterance = new SpeechSynthesisUtterance({safe_text});
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
-            }};
-        </script>
-        """
-        return html
+    if not voice_bytes:
+        return ""  # No voice recorded → no button (no fallback TTS)
+    audio_b64 = base64.b64encode(voice_bytes).decode()
+    mime = "audio/wav"
+    html = f"""
+    <button class="speak-btn" id="voiceBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
+    <audio id="customAudio_{key_suffix}" style="display:none;"></audio>
+    <script>
+        (function() {{
+            const audioData = "{audio_b64}";
+            const binaryStr = atob(audioData);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+            const audioBlob = new Blob([bytes], {{ type: '{mime}' }});
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioEl = document.getElementById('customAudio_{key_suffix}');
+            audioEl.src = audioUrl;
+            document.getElementById('voiceBtn_{key_suffix}').onclick = () => audioEl.play();
+        }})();
+    </script>
+    """
+    return html
 
 # ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text, t):
@@ -803,9 +793,12 @@ def test_training(t):
             save_voice_for_text(st.session_state.test_answer, voice_up.read())
             st.success("Voice saved")
             st.rerun()
-        st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
+        # Only show speak button if a voice file exists
+        voice_html = play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test")
+        if voice_html:
+            st.components.v1.html(voice_html, height=50)
 
-# ---------- GESNER AI CHAT MODE (voice button visible) ----------
+# ---------- GESNER AI CHAT MODE (voice button only if user voice exists) ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -821,7 +814,9 @@ def chat_mode_interface():
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
+                voice_html = play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}")
+                if voice_html:
+                    st.components.v1.html(voice_html, height=50)
     
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
@@ -914,7 +909,7 @@ def training_mode():
 # ---------- MAIN ----------
 def main_app():
     load_previous_training()
-    show_sidebar()  # <--- was missing! Show sidebar in both modes
+    show_sidebar()
     if st.session_state.chat_mode:
         chat_mode_interface()
     else:
