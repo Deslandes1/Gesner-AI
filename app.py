@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ========== FORCE SESSION STATE INITIALISATION ==========
+# ========== 1. FORCE SESSION STATE INITIALISATION (BEFORE ANYTHING ELSE) ==========
 def init_session_state():
     defaults = {
         "authenticated": False,
@@ -41,6 +41,7 @@ def init_session_state():
 
 init_session_state()
 
+# Load the embedding model if not already done
 if st.session_state.embedding_model is None:
     with st.spinner("Loading AI model... (first time only)"):
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -52,7 +53,7 @@ LANGUAGES = {
     "Kreyòl Ayisyen": "ht"
 }
 
-# ---------- FULL TEXTS DICTIONARY ----------
+# ---------- FULL TEXTS DICTIONARY (corrected) ----------
 TEXTS = {
     "en": {
         "training_app_title": "🧠 Gesner AI – Training Center",
@@ -67,14 +68,11 @@ TEXTS = {
         "text_area_label": "Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')",
         "train_text_button": "Train",
         "audio_title": "🎤 Train Me with Audio",
-        "expand_audio": "Record or upload audio + transcription",
+        "expand_audio": "Upload audio + transcription",
         "audio_upload_label": "Upload Audio File",
         "transcribe_label": "Transcribed text:",
         "transcription_textarea": "Type the transcription here",
         "train_transcription_button": "Train",
-        "record_btn": "🔴 Record",
-        "stop_btn": "⏹️ Stop",
-        "download_btn": "💾 Download",
         "image_title": "🖼️ Train Me with Images",
         "expand_image": "Upload an image + description",
         "image_upload_label": "Choose an image",
@@ -95,13 +93,7 @@ TEXTS = {
         "website_label": "🌐 Website:",
         "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
         "pricing_title": "💰 Licensing",
-        "pricing_table": """
-| License | Price (one‑time) |
-|---------|------------------|
-| **Personal** | $49 |
-| **Business** | $299 |
-| **Enterprise / Source** | $999 |
-""",
+        "pricing_table": "| License | Price (one‑time) |\n|---------|------------------|\n| **Personal** | $49 |\n| **Business** | $299 |\n| **Enterprise / Source** | $999 |\n",
         "logout_button": "🔓 Logout",
         "no_facts_answer": "I don't know that yet. Please teach me in Training Mode!",
         "with_facts_answer": "{context}",
@@ -141,7 +133,6 @@ TEXTS = {
         "encyclopedia_tags": "Tags (comma)",
         "encyclopedia_save": "Save Entry",
         "encyclopedia_list": "Existing Entries",
-        "voice_download": "Download Recording",
         "test_title": "🧪 Test Training",
         "test_question": "Ask a question to retrieve exact stored fact",
         "test_button": "Test",
@@ -151,10 +142,6 @@ TEXTS = {
         "chat_mode_title": "💬 Gesner AI Chat",
         "chat_mode_placeholder": "Ask me anything...",
         "chat_speak_button": "🔊",
-        "chat_upload_voice": "Upload voice for this answer",
-        "image_upload_label": "📷 Upload image",
-        "image_describe_button": "Describe",
-        "image_description_result": "Description:",
         "toggle_chat_mode": "Chat Mode"
     },
     "fr": {
@@ -170,14 +157,11 @@ TEXTS = {
         "text_area_label": "Entrez la connaissance",
         "train_text_button": "Entraîner",
         "audio_title": "🎤 Entraînez‑moi avec audio",
-        "expand_audio": "Enregistrez ou téléchargez audio + transcription",
+        "expand_audio": "Téléchargez audio + transcription",
         "audio_upload_label": "Fichier audio",
         "transcribe_label": "Texte transcrit :",
         "transcription_textarea": "Tapez la transcription",
         "train_transcription_button": "Entraîner",
-        "record_btn": "🔴 Enregistrer",
-        "stop_btn": "⏹️ Arrêter",
-        "download_btn": "💾 Télécharger",
         "image_title": "🖼️ Entraînez‑moi avec images",
         "expand_image": "Image + description",
         "image_upload_label": "Choisir une image",
@@ -198,13 +182,7 @@ TEXTS = {
         "website_label": "🌐 Site web :",
         "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
         "pricing_title": "💰 Licence",
-        "pricing_table": """
-| Licence | Prix (unique) |
-|---------|---------------|
-| **Personnelle** | 49 $ |
-| **Entreprise** | 299 $ |
-| **Entreprise / Code source** | 999 $ |
-""",
+        "pricing_table": "| Licence | Prix (unique) |\n|---------|---------------|\n| **Personnelle** | 49 $ |\n| **Entreprise** | 299 $ |\n| **Entreprise / Code source** | 999 $ |\n",
         "logout_button": "🔓 Déconnexion",
         "no_facts_answer": "Je ne connais pas encore cela. Enseignez‑moi en mode Entraînement !",
         "with_facts_answer": "{context}",
@@ -244,7 +222,6 @@ TEXTS = {
         "encyclopedia_tags": "Étiquettes (virgules)",
         "encyclopedia_save": "Enregistrer",
         "encyclopedia_list": "Entrées existantes",
-        "voice_download": "Télécharger",
         "test_title": "🧪 Tester l'entraînement",
         "test_question": "Posez une question pour voir le fait stocké",
         "test_button": "Tester",
@@ -254,10 +231,6 @@ TEXTS = {
         "chat_mode_title": "💬 Gesner IA Chat",
         "chat_mode_placeholder": "Demandez‑moi n'importe quoi...",
         "chat_speak_button": "🔊",
-        "chat_upload_voice": "Téléchargez votre voix pour cette réponse",
-        "image_upload_label": "📷 Télécharger une image",
-        "image_describe_button": "Décrire",
-        "image_description_result": "Description :",
         "toggle_chat_mode": "Mode Chat"
     },
     "ht": {
@@ -273,14 +246,11 @@ TEXTS = {
         "text_area_label": "Antre konesans lan",
         "train_text_button": "Antrene",
         "audio_title": "🎤 Antrene m ak odyo",
-        "expand_audio": "Anrejistre oswa chaje odyo + transkripsyon",
+        "expand_audio": "Chaje odyo + transkripsyon",
         "audio_upload_label": "Chaje fichye odyo",
         "transcribe_label": "Tèks transkri :",
         "transcription_textarea": "Tape transkripsyon an",
         "train_transcription_button": "Antrene",
-        "record_btn": "🔴 Anrejistre",
-        "stop_btn": "⏹️ Sispann",
-        "download_btn": "💾 Telechaje",
         "image_title": "🖼️ Antrene m ak imaj",
         "expand_image": "Imaj + deskripsyon",
         "image_upload_label": "Chwazi yon imaj",
@@ -301,13 +271,7 @@ TEXTS = {
         "website_label": "🌐 Sitwèb :",
         "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
         "pricing_title": "💰 Pri",
-        "pricing_table": """
-| Lisans | Pri (yon fwa) |
-|--------|---------------|
-| **Pèsonèl** | $49 |
-| **Biznis** | $299 |
-| **Antrepriz / Kòd sous** | $999 |
-""",
+        "pricing_table": "| Lisans | Pri (yon fwa) |\n|--------|---------------|\n| **Pèsonèl** | $49 |\n| **Biznis** | $299 |\n| **Antrepriz / Kòd sous** | $999 |\n",
         "logout_button": "🔓 Dekonekte",
         "no_facts_answer": "Mwen poko konnen sa. Tanpri anseye m nan Mòd Fòmasyon!",
         "with_facts_answer": "{context}",
@@ -347,7 +311,6 @@ TEXTS = {
         "encyclopedia_tags": "Etikèt (vigil)",
         "encyclopedia_save": "Sove",
         "encyclopedia_list": "Antre ki egziste",
-        "voice_download": "Telechaje",
         "test_title": "🧪 Tese fòmasyon",
         "test_question": "Pose yon kesyon pou wè reyalite a",
         "test_button": "Tese",
@@ -357,15 +320,11 @@ TEXTS = {
         "chat_mode_title": "💬 Gesner AI Chat",
         "chat_mode_placeholder": "Pose yon kesyon...",
         "chat_speak_button": "🔊",
-        "chat_upload_voice": "Chaje vwa ou pou repons sa a",
-        "image_upload_label": "📷 Chaje yon imaj",
-        "image_describe_button": "Dekri",
-        "image_description_result": "Deskripsyon :",
         "toggle_chat_mode": "Mòd Chat"
     }
 }
 
-# ---------- CSS (unchanged) ----------
+# ---------- CSS ----------
 st.markdown("""
 <style>
     .stApp {
@@ -441,12 +400,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- VOICE CACHE (with normalisation) ----------
+# ---------- VOICE CACHE (normalised) ----------
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def normalize_text(text: str) -> str:
+    """Lowercase, strip, collapse multiple spaces."""
     text = text.strip().lower()
     return re.sub(r'\s+', ' ', text)
 
@@ -469,6 +429,8 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
+    """Returns HTML for a button that plays the user's pre-recorded voice.
+       If no voice file exists, returns an empty string (no button)."""
     voice_bytes = get_voice_for_text(text)
     if not voice_bytes:
         return ""
@@ -566,11 +528,11 @@ def login_page():
     <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
         <div class="login-card" style="background: rgba(15,52,96,0.8); backdrop-filter: blur(12px); border-radius: 30px; padding: 2rem; text-align: center; border: 1px solid #e94560; width: 100%; max-width: 450px; margin: auto;">
             <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">Gesner AI</div>
+            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">{t['login_title']}</div>
             <p style="color:white;">{t['login_message']}</p>
     """, unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="login_pass")
-    if st.button(t['login_button'], use_container_width=True):
+    if st.button(t['login_button'], key="login_btn", use_container_width=True):
         if password == "20082010":
             st.session_state.authenticated = True
             st.rerun()
@@ -580,7 +542,7 @@ def login_page():
 
 def show_sidebar():
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names)
+    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="lang_selector")
     st.session_state.language = LANGUAGES[selected_lang_name]
     t = TEXTS[st.session_state.language]
 
@@ -601,12 +563,12 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
-    chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
+    chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode, key="chat_mode_toggle")
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
         st.rerun()
     
-    if st.sidebar.button(t['logout_button'], use_container_width=True):
+    if st.sidebar.button(t['logout_button'], key="logout_btn", use_container_width=True):
         st.session_state.authenticated = False
         st.rerun()
 
@@ -667,90 +629,28 @@ def save_dictionaries():
     with open("dictionaries.json", "w") as f:
         json.dump(st.session_state.dictionaries, f, indent=2)
 
-def save_audio_transcriptions():
-    with open("audio_transcriptions.json", "w") as f:
-        json.dump(st.session_state.audio_transcriptions, f, indent=2)
-
 def save_encyclopedia():
     with open("encyclopedia.json", "w") as f:
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
-# ========== FIXED VOICE TRAINING (recorder + upload) ==========
+# ---------- VOICE TRAINING (only file upload, no recorder) ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    
-    # Simple but reliable HTML5 recorder that saves a WAV file for download
-    recorder_html = """
-    <div id="record-container">
-        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">🔴 Record</button>
-        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px;">⏹️ Stop</button>
-        <p id="status"></p>
-        <audio id="playback" controls style="width:100%; margin-top:10px;"></audio>
-        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">💾 Download</a>
-    </div>
-    <script>
-        (function() {
-            let mediaRecorder;
-            let audioChunks = [];
-            const recordBtn = document.getElementById('recordBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            const statusP = document.getElementById('status');
-            const playback = document.getElementById('playback');
-            const downloadLink = document.getElementById('downloadLink');
-            
-            recordBtn.onclick = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(audioBlob);
-                        playback.src = audioUrl;
-                        downloadLink.href = audioUrl;
-                        downloadLink.download = 'recording.wav';
-                        downloadLink.style.display = 'block';
-                        audioChunks = [];
-                        statusP.innerText = 'Recording saved. Click Download to save file, then upload below.';
-                    };
-                    mediaRecorder.start();
-                    recordBtn.disabled = true;
-                    stopBtn.disabled = false;
-                    statusP.innerText = 'Recording...';
-                } catch (err) {
-                    statusP.innerText = 'Error: ' + err.message;
-                }
-            };
-            stopBtn.onclick = () => {
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                    recordBtn.disabled = false;
-                    stopBtn.disabled = true;
-                }
-            };
-        })();
-    </script>
-    """
-    st.html(recorder_html)
-    st.info("📌 After recording, click **Download** to save the file, then upload it below.")
-    
-    st.markdown(f"### 📂 {t['voice_upload']}")
+    st.info("📌 Use your phone or computer to record your voice, then upload the file below. Write the exact text you said.")
     uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload_fixed")
     transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript_fixed")
-    
     if uploaded_file and transcript.strip():
-        if st.button(t['voice_train'], use_container_width=True):
+        if st.button(t['voice_train'], key="train_voice_btn", use_container_width=True):
             audio_bytes = uploaded_file.read()
             norm_transcript = normalize_text(transcript.strip())
             save_voice_for_text(norm_transcript, audio_bytes)
             add_to_training(transcript.strip(), t)
             st.success(t['voice_success'])
 
-# ---------- OTHER FUNCTIONS (translation, encyclopedia, test, chat, training) ----------
 def translation_correction(t):
     st.markdown(f"## {t['translation_title']}")
-    source = st.text_area(t['translation_source_text'], height=100)
-    if st.button(t['translate_btn'], use_container_width=True):
+    source = st.text_area(t['translation_source_text'], height=100, key="trans_source")
+    if st.button(t['translate_btn'], key="translate_btn", use_container_width=True):
         if source.strip():
             url = "https://api.mymemory.translated.net/get"
             params = {"q": source, "langpair": "auto|ht"}
@@ -765,8 +665,8 @@ def translation_correction(t):
             except Exception as e:
                 st.warning(f"Error: {e}")
     if "translated" in st.session_state and st.session_state.translated:
-        corrected = st.text_area(t['translation_result'], value=st.session_state.translated, height=100)
-        if st.button(t['train_translation_btn'], use_container_width=True):
+        corrected = st.text_area(t['translation_result'], value=st.session_state.translated, height=100, key="trans_corrected")
+        if st.button(t['train_translation_btn'], key="train_trans_btn", use_container_width=True):
             if corrected.strip():
                 add_to_training(corrected, t)
                 st.success("Trained")
@@ -776,11 +676,11 @@ def translation_correction(t):
 def encyclopedia_manager(t):
     st.markdown(f"## {t['encyclopedia_title']}")
     with st.expander(t['encyclopedia_add']):
-        title = st.text_input(t['encyclopedia_title_field'])
-        content = st.text_area(t['encyclopedia_content'], height=150)
-        lang = st.selectbox(t['encyclopedia_lang'], ["English", "Français", "Kreyòl Ayisyen", "Español"])
-        tags = st.text_input(t['encyclopedia_tags'])
-        if st.button(t['encyclopedia_save'], use_container_width=True):
+        title = st.text_input(t['encyclopedia_title_field'], key="enc_title")
+        content = st.text_area(t['encyclopedia_content'], height=150, key="enc_content")
+        lang = st.selectbox(t['encyclopedia_lang'], ["English", "Français", "Kreyòl Ayisyen", "Español"], key="enc_lang")
+        tags = st.text_input(t['encyclopedia_tags'], key="enc_tags")
+        if st.button(t['encyclopedia_save'], key="save_enc_btn", use_container_width=True):
             if title and content:
                 entry = {"title": title, "content": content, "language": lang, "tags": [t.strip() for t in tags.split(",") if t.strip()], "timestamp": time.time()}
                 st.session_state.encyclopedia.append(entry)
@@ -802,8 +702,8 @@ def encyclopedia_manager(t):
 
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
-    q = st.text_input(t['test_question'])
-    if st.button(t['test_button'], use_container_width=True):
+    q = st.text_input(t['test_question'], key="test_q")
+    if st.button(t['test_button'], key="test_btn", use_container_width=True):
         if q.strip():
             facts = retrieve_relevant_facts(q, k=1)
             if facts:
@@ -841,14 +741,14 @@ def chat_mode_interface():
                     st.html(voice_html)
     
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
-    if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
+    if st.button(t['send_button'], key="chat_send_new", use_container_width=True):
         if user_input.strip():
             answer = generate_response(user_input)
             st.session_state.chat_messages.append({"role": "user", "content": user_input})
             st.session_state.chat_messages.append({"role": "assistant", "content": answer})
             st.rerun()
     
-    if st.button("Clear Chat", use_container_width=True, key="clear_chat_new"):
+    if st.button("Clear Chat", key="clear_chat_new", use_container_width=True):
         st.session_state.chat_messages = []
         st.rerun()
 
@@ -872,7 +772,7 @@ def training_mode():
             st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
     
     user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
-    if st.button(t["send_button"], use_container_width=True):
+    if st.button(t["send_button"], key="train_chat_send", use_container_width=True):
         if user_input.strip():
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             response = generate_response(user_input)
@@ -882,8 +782,8 @@ def training_mode():
     st.markdown("---")
     st.markdown(f"## {t['training_text_title']}")
     with st.expander(t["expand_text"]):
-        text = st.text_area(t["text_area_label"])
-        if st.button(t["train_text_button"], use_container_width=True):
+        text = st.text_area(t["text_area_label"], key="train_text")
+        if st.button(t["train_text_button"], key="train_text_btn", use_container_width=True):
             add_to_training(text, t)
     
     st.markdown(f"## {t['audio_title']}")
@@ -892,11 +792,11 @@ def training_mode():
     
     st.markdown(f"## {t['image_title']}")
     with st.expander(t["expand_image"]):
-        img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
-        desc = st.text_area(t["image_description_label"])
+        img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"], key="img_upload")
+        desc = st.text_area(t["image_description_label"], key="img_desc")
         if img_file:
             st.image(img_file, caption=t['image_caption'], width=200)
-            if st.button(t["train_image_button"], use_container_width=True):
+            if st.button(t["train_image_button"], key="train_img_btn", use_container_width=True):
                 if desc.strip():
                     add_to_training(desc, t)
                 else:
@@ -904,11 +804,11 @@ def training_mode():
     
     st.markdown(f"## {t['file_title']}")
     with st.expander(t["expand_file"]):
-        txt_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
+        txt_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"], key="txt_upload")
         if txt_file:
             content = txt_file.read().decode("utf-8")
-            st.text_area(t['file_preview'], content, height=150)
-            if st.button(t["train_file_button"], use_container_width=True):
+            st.text_area(t['file_preview'], content, height=150, key="file_preview_area")
+            if st.button(t["train_file_button"], key="train_file_btn", use_container_width=True):
                 add_to_training(content, t)
     
     st.markdown("---")
@@ -922,7 +822,7 @@ def training_mode():
     
     st.markdown("---")
     st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
-    if st.button(t["clear_chat_button"], use_container_width=True):
+    if st.button(t["clear_chat_button"], key="clear_chat_btn", use_container_width=True):
         st.session_state.conversation_history = []
         st.rerun()
 
@@ -939,7 +839,7 @@ def main_app():
 # ---------- ROUTING ----------
 if not st.session_state.authenticated:
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang")
+    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang_selector")
     st.session_state.language = LANGUAGES[selected_lang_name]
     login_page()
 else:
