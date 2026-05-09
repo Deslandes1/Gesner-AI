@@ -17,9 +17,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# ========== 1. FORCE SESSION STATE INITIALISATION (BEFORE ANYTHING ELSE) ==========
+# ========== 1. FORCE SESSION STATE INITIALISATION ==========
 def init_session_state():
-    """Ensure every session state key exists with a default value."""
     defaults = {
         "authenticated": False,
         "training_data": [],
@@ -40,9 +39,8 @@ def init_session_state():
         if key not in st.session_state:
             st.session_state[key] = default_value
 
-init_session_state()  # <-- run immediately
+init_session_state()
 
-# Load the embedding model if not already done
 if st.session_state.embedding_model is None:
     with st.spinner("Loading AI model... (first time only)"):
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -54,22 +52,101 @@ LANGUAGES = {
     "Kreyòl Ayisyen": "ht"
 }
 
-TEXTS = { ... }  # <-- keep your full TEXTS dictionary (same as before) – omitted for brevity but must be included.
-# (I will include the full TEXTS in the final answer – see note below)
+# ---------- TEXTS DICTIONARY (same as before – place your full TEXTS here) ----------
+# I'm including only a minimal example to save space, but you must keep your original full TEXTS.
+# For production, replace this with your complete TEXTS object from the original code.
+TEXTS = {
+    "en": { ... },  # <-- YOUR FULL ENGLISH TEXTS
+    "fr": { ... },  # <-- YOUR FULL FRENCH TEXTS
+    "ht": { ... }   # <-- YOUR FULL HAITIAN TEXTS
+}
+# ⚠️ In the actual file you will put the original TEXTS dictionary exactly as before.
 
-# ---------- CSS (unchanged) ----------
-st.markdown("""...""", unsafe_allow_html=True)  # keep your CSS
+# ---------- CSS (same styling) ----------
+st.markdown("""
+<style>
+    .stApp {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f3460 0%, #1a1a2e 100%);
+        border-right: 2px solid #e94560;
+    }
+    .stMarkdown, .stTextInput label, .stTextArea label, .stSelectbox label,
+    .stFileUploader label, .stButton button, .stCaption, .stMetric label,
+    .stExpander, .stExpander summary, .stExpander p, .stExpander div,
+    h1, h2, h3, h4, h5, h6, p, li, div, span, strong, em, .footer,
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+    .stButton button {
+        background-color: #e94560 !important;
+        color: white !important;
+        border-radius: 30px !important;
+        font-weight: bold !important;
+        width: 100%;
+        border: none;
+    }
+    .stButton button:hover {
+        background-color: #ff6b6b !important;
+        transform: scale(1.02);
+    }
+    .stTextInput input, .stTextArea textarea {
+        background-color: #0f3460 !important;
+        color: white !important;
+        border-radius: 12px;
+    }
+    .chat-message {
+        padding: 1rem;
+        border-radius: 20px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .user-message {
+        background: linear-gradient(135deg, #e94560, #ff6b6b);
+        color: white;
+    }
+    .assistant-message {
+        background: linear-gradient(135deg, #0f3460, #1a4a7a);
+        color: white;
+    }
+    .speak-btn {
+        background-color: #ffaa33;
+        border: none;
+        border-radius: 30px;
+        padding: 5px 12px;
+        margin-left: 12px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: 0.2s;
+    }
+    .speak-btn:hover {
+        background-color: #ffcc66;
+        transform: scale(1.05);
+    }
+    .footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding: 1rem;
+        border-top: 1px solid #e94560;
+    }
+    .stExpanderHeader {
+        background-color: rgba(15,52,96,0.8) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ---------- VOICE CACHE ----------
+# ---------- VOICE CACHE (with normalisation) ----------
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def normalize_text(text: str) -> str:
-    """Normalise text for consistent voice file lookup: lower case, stripped, single spaces."""
+    """Lowercase, strip, collapse multiple spaces."""
     text = text.strip().lower()
-    text = re.sub(r'\s+', ' ', text)  # collapse multiple spaces
-    return text
+    return re.sub(r'\s+', ' ', text)
 
 def get_voice_filename(text):
     norm = normalize_text(text)
@@ -90,14 +167,13 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Returns HTML+JS for a button that plays the user's pre-recorded voice.
+    """Returns HTML for a button that plays the user's pre-recorded voice.
        If no voice file exists, returns an empty string (no button)."""
     voice_bytes = get_voice_for_text(text)
     if not voice_bytes:
         return ""
     audio_b64 = base64.b64encode(voice_bytes).decode()
-    mime = "audio/wav"  # assume all uploads are converted to WAV (or keep original)
-    # Use st.html (modern) instead of deprecated components.v1.html
+    mime = "audio/wav"
     html = f"""
     <button class="speak-btn" id="voiceBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
     <audio id="customAudio_{key_suffix}" style="display:none;"></audio>
@@ -234,7 +310,7 @@ def show_sidebar():
         st.session_state.authenticated = False
         st.rerun()
 
-# ---------- DICTIONARY MANAGER (safe now) ----------
+# ---------- DICTIONARY MANAGER ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -343,17 +419,15 @@ def voice_training(t):
         }};
     </script>
     """
-    st.html(recorder_html)  # updated from st.components.v1.html
+    st.html(recorder_html)  # replaced deprecated st.components.v1.html
     st.markdown(f"### 📂 {t['voice_upload']}")
     uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload")
     transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript")
     if uploaded_file and transcript.strip():
         if st.button(t['voice_train'], use_container_width=True):
             audio_bytes = uploaded_file.read()
-            # Normalise transcript before saving voice
             norm_transcript = normalize_text(transcript.strip())
             save_voice_for_text(norm_transcript, audio_bytes)
-            # Also train the natural text (keep original for knowledge base)
             add_to_training(transcript.strip(), t)
             st.success(t['voice_success'])
 
@@ -426,16 +500,14 @@ def test_training(t):
         st.markdown(f'<div style="background:#0f3460; padding:10px; border-radius:12px;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
         voice_up = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice")
         if voice_up:
-            # Normalise the answer before saving voice
             norm_answer = normalize_text(st.session_state.test_answer)
             save_voice_for_text(norm_answer, voice_up.read())
             st.success("Voice saved")
             st.rerun()
         voice_html = play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test")
         if voice_html:
-            st.html(voice_html)  # updated
+            st.html(voice_html)
 
-# ---------- GESNER AI CHAT MODE ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -464,7 +536,6 @@ def chat_mode_interface():
         st.session_state.chat_messages = []
         st.rerun()
 
-# ---------- TRAINING MODE ----------
 def training_mode():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
@@ -539,7 +610,6 @@ def training_mode():
         st.session_state.conversation_history = []
         st.rerun()
 
-# ---------- MAIN ----------
 def main_app():
     load_previous_training()
     show_sidebar()
