@@ -429,6 +429,14 @@ if "language" not in st.session_state:
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 
+# ---------- ADD MISSING SESSION STATE INITIALIZATIONS ----------
+if "dictionaries" not in st.session_state:
+    st.session_state.dictionaries = {"ht": {}, "fr": {}, "en": {}}
+if "audio_transcriptions" not in st.session_state:
+    st.session_state.audio_transcriptions = []
+if "encyclopedia" not in st.session_state:
+    st.session_state.encyclopedia = []
+
 # Voice cache directory
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
@@ -654,6 +662,18 @@ def dictionary_manager(t):
                 del st.session_state.dictionaries["en"][word]
                 save_dictionaries()
                 st.rerun()
+
+def save_dictionaries():
+    with open("dictionaries.json", "w") as f:
+        json.dump(st.session_state.dictionaries, f, indent=2)
+
+def save_audio_transcriptions():
+    with open("audio_transcriptions.json", "w") as f:
+        json.dump(st.session_state.audio_transcriptions, f, indent=2)
+
+def save_encyclopedia():
+    with open("encyclopedia.json", "w") as f:
+        json.dump(st.session_state.encyclopedia, f, indent=2)
 
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
