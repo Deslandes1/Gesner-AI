@@ -122,7 +122,8 @@ TEXTS = {
         "test_question": "Ask a question to see exactly what I learned and hear it spoken:",
         "test_button": "Ask Gesner AI",
         "test_answer_label": "Retrieved Answer (exact text I learned):",
-        "test_speak_button": "🔊 Speak Answer"
+        "test_speak_button": "🔊 Speak Answer",
+        "upload_voice_label": "Upload your voice recording of this exact answer (WAV/MP3)"
     },
     "fr": {
         "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
@@ -223,7 +224,8 @@ TEXTS = {
         "test_question": "Posez une question pour voir exactement ce que j’ai appris et l’entendre:",
         "test_button": "Demander à Gesner IA",
         "test_answer_label": "Réponse récupérée (texte exact que j’ai appris) :",
-        "test_speak_button": "🔊 Lire la réponse"
+        "test_speak_button": "🔊 Lire la réponse",
+        "upload_voice_label": "Téléchargez votre enregistrement vocal de cette réponse exacte (WAV/MP3)"
     },
     "ht": {
         "app_title": "🧠 Gesner AI – Antrene AI Pèsonèl Ayisyen w la",
@@ -324,11 +326,12 @@ TEXTS = {
         "test_question": "Pose yon kesyon pou wè egzakteman sa m aprann epi tande l:",
         "test_button": "Mande Gesner AI",
         "test_answer_label": "Repons ki te jwenn (tèks egzak mwen aprann):",
-        "test_speak_button": "🔊 Pwononse repons lan"
+        "test_speak_button": "🔊 Pwononse repons lan",
+        "upload_voice_label": "Chaje vwa ou k ap li repons egzak sa a (WAV/MP3)"
     }
 }
 
-# ---------- CUSTOM CSS (same as before) ----------
+# ---------- CUSTOM CSS (unchanged) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -494,7 +497,6 @@ def load_previous_training():
 # Pre‑train the introduction text (if not already present)
 intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
 if intro_text_ht not in st.session_state.texts:
-    # Add it only once at startup
     embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
     st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
     if st.session_state.index is None:
@@ -745,7 +747,7 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
-# ---------- TEST TRAINING SECTION ----------
+# ---------- TEST TRAINING SECTION (with own voice upload) ----------
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
     test_question = st.text_input(t['test_question'], key="test_question")
@@ -760,23 +762,34 @@ def test_training(t):
     if "test_answer" in st.session_state:
         st.markdown(f"**{t['test_answer_label']}**")
         st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
-        # Speak button using JavaScript
+        
+        # File uploader for user's own voice recording
+        uploaded_voice = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice_upload")
+        if uploaded_voice is not None:
+            st.session_state.user_voice_bytes = uploaded_voice.read()
+            st.success("Voice recording loaded. Click the button below to play it.")
+        
+        # Speak button: if custom voice is uploaded, play that; else use speech synthesis
         speak_button_html = f"""
         <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
         <script>
+            let userVoiceBlob = null;
+            {"userVoiceBlob = new Blob([" + str(st.session_state.get("user_voice_bytes", b"")) + "], {type: 'audio/wav'});" if st.session_state.get("user_voice_bytes") else ""}
             document.getElementById('speakAnswerBtn').onclick = () => {{
-                const text = {json.dumps(st.session_state.test_answer)};
-                const utterance = new SpeechSynthesisUtterance(text);
-                // Use a Haitian Creole voice if available (e.g., Google Kreyòl)
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
+                if (userVoiceBlob) {{
+                    const audioUrl = URL.createObjectURL(userVoiceBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                }} else {{
+                    const text = {json.dumps(st.session_state.test_answer)};
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                }}
             }};
         </script>
         """
         st.components.v1.html(speak_button_html, height=50)
-        # Optional: if the user has uploaded a custom voice file, play it here.
-        if os.path.exists("myvoice.wav"):
-            st.audio("myvoice.wav", format="audio/wav")
 
 # ---------- MAIN APP ----------
 def main_app():
