@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ========== 1. FORCE SESSION STATE INITIALISATION (BEFORE ANYTHING ELSE) ==========
+# ========== 1. FORCE SESSION STATE INITIALISATION ==========
 def init_session_state():
     defaults = {
         "authenticated": False,
@@ -41,7 +41,6 @@ def init_session_state():
 
 init_session_state()
 
-# Load the embedding model if not already done
 if st.session_state.embedding_model is None:
     with st.spinner("Loading AI model... (first time only)"):
         st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -68,11 +67,14 @@ TEXTS = {
         "text_area_label": "Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')",
         "train_text_button": "Train",
         "audio_title": "🎤 Train Me with Audio",
-        "expand_audio": "Upload audio + transcription",
+        "expand_audio": "Record or upload audio + transcription",
         "audio_upload_label": "Upload Audio File",
         "transcribe_label": "Transcribed text:",
         "transcription_textarea": "Type the transcription here",
         "train_transcription_button": "Train",
+        "record_btn": "🔴 Record",
+        "stop_btn": "⏹️ Stop",
+        "download_btn": "💾 Download",
         "image_title": "🖼️ Train Me with Images",
         "expand_image": "Upload an image + description",
         "image_upload_label": "Choose an image",
@@ -157,11 +159,14 @@ TEXTS = {
         "text_area_label": "Entrez la connaissance",
         "train_text_button": "Entraîner",
         "audio_title": "🎤 Entraînez‑moi avec audio",
-        "expand_audio": "Téléchargez audio + transcription",
+        "expand_audio": "Enregistrez ou téléchargez audio + transcription",
         "audio_upload_label": "Fichier audio",
         "transcribe_label": "Texte transcrit :",
         "transcription_textarea": "Tapez la transcription",
         "train_transcription_button": "Entraîner",
+        "record_btn": "🔴 Enregistrer",
+        "stop_btn": "⏹️ Arrêter",
+        "download_btn": "💾 Télécharger",
         "image_title": "🖼️ Entraînez‑moi avec images",
         "expand_image": "Image + description",
         "image_upload_label": "Choisir une image",
@@ -246,11 +251,14 @@ TEXTS = {
         "text_area_label": "Antre konesans lan",
         "train_text_button": "Antrene",
         "audio_title": "🎤 Antrene m ak odyo",
-        "expand_audio": "Chaje odyo + transkripsyon",
+        "expand_audio": "Anrejistre oswa chaje odyo + transkripsyon",
         "audio_upload_label": "Chaje fichye odyo",
         "transcribe_label": "Tèks transkri :",
         "transcription_textarea": "Tape transkripsyon an",
         "train_transcription_button": "Antrene",
+        "record_btn": "🔴 Anrejistre",
+        "stop_btn": "⏹️ Sispann",
+        "download_btn": "💾 Telechaje",
         "image_title": "🖼️ Antrene m ak imaj",
         "expand_image": "Imaj + deskripsyon",
         "image_upload_label": "Chwazi yon imaj",
@@ -400,13 +408,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- VOICE CACHE (normalised) ----------
+# ---------- VOICE CACHE ----------
 VOICE_CACHE_DIR = "voice_cache"
 if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def normalize_text(text: str) -> str:
-    """Lowercase, strip, collapse multiple spaces."""
     text = text.strip().lower()
     return re.sub(r'\s+', ' ', text)
 
@@ -429,8 +436,6 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Returns HTML for a button that plays the user's pre-recorded voice.
-       If no voice file exists, returns an empty string (no button)."""
     voice_bytes = get_voice_for_text(text)
     if not voice_bytes:
         return ""
@@ -633,12 +638,68 @@ def save_encyclopedia():
     with open("encyclopedia.json", "w") as f:
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
-# ---------- VOICE TRAINING (only file upload, no recorder) ----------
+# ========== WORKING VOICE RECORDER ==========
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    st.info("📌 Use your phone or computer to record your voice, then upload the file below. Write the exact text you said.")
+    
+    # HTML5 recorder that saves as WAV and provides download link
+    recorder_html = """
+    <div id="recorder-container">
+        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">🔴 Record</button>
+        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px;">⏹️ Stop</button>
+        <p id="status" style="margin-top:10px;"></p>
+        <audio id="playback" controls style="width:100%; margin-top:10px;"></audio>
+        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">💾 Download</a>
+    </div>
+    <script>
+        (function() {
+            let mediaRecorder;
+            let audioChunks = [];
+            const recordBtn = document.getElementById('recordBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const statusP = document.getElementById('status');
+            const playback = document.getElementById('playback');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            recordBtn.onclick = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        playback.src = audioUrl;
+                        downloadLink.href = audioUrl;
+                        downloadLink.download = 'recording.wav';
+                        downloadLink.style.display = 'block';
+                        audioChunks = [];
+                        statusP.innerText = 'Recording saved. Click Download to save file, then upload below.';
+                    };
+                    mediaRecorder.start();
+                    recordBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    statusP.innerText = 'Recording...';
+                } catch (err) {
+                    statusP.innerText = 'Error: ' + err.message;
+                }
+            };
+            stopBtn.onclick = () => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    recordBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            };
+        })();
+    </script>
+    """
+    st.html(recorder_html)
+    st.info("📌 After recording, click **Download** to save the file, then upload it below.")
+    
     uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload_fixed")
     transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript_fixed")
+    
     if uploaded_file and transcript.strip():
         if st.button(t['voice_train'], key="train_voice_btn", use_container_width=True):
             audio_bytes = uploaded_file.read()
@@ -720,9 +781,12 @@ def test_training(t):
             save_voice_for_text(norm_answer, voice_up.read())
             st.success("Voice saved")
             st.rerun()
+        # Test speak button – using st.html to render the button
         voice_html = play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test")
         if voice_html:
             st.html(voice_html)
+        else:
+            st.info("No voice recorded for this answer yet. Upload your voice above.")
 
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
