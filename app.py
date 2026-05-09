@@ -75,6 +75,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Logout",
         "no_facts_answer": "I don't understand. Could you rephrase your question?",
+        "french_fallback": "Désolé, je n'ai pas encore la réponse. Pouvez-vous reformuler votre question ?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Trained: {text}...",
         "warning_no_text": "Please enter some text.",
@@ -178,6 +179,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Déconnexion",
         "no_facts_answer": "Je ne comprends pas. Pouvez-vous reformuler votre question ?",
+        "french_fallback": "Désolé, je n'ai pas encore la réponse. Pouvez-vous reformuler votre question ?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Entraîné : {text}...",
         "warning_no_text": "Veuillez saisir du texte.",
@@ -281,6 +283,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Dekonekte",
         "no_facts_answer": "Mwen pa konprann. Èske ou ka repete kesyon an yon lòt fason?",
+        "french_fallback": "Désolé, je n'ai pas encore la réponse. Pouvez-vous reformuler votre question ?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Antrene : {text}...",
         "warning_no_text": "Tanpri antre kèk tèks.",
@@ -384,6 +387,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Cerrar sesión",
         "no_facts_answer": "No entiendo. ¿Podrías reformular tu pregunta?",
+        "french_fallback": "Désolé, je n'ai pas encore la réponse. Pouvez-vous reformuler votre question ?",
         "with_facts_answer": "{context}",
         "training_success": "✅ Entrenado: {text}...",
         "warning_no_text": "Por favor ingrese texto.",
@@ -439,7 +443,7 @@ TEXTS = {
     }
 }
 
-# ---------- CSS (forces all text to bright white) ----------
+# ---------- CSS ----------
 st.markdown("""
 <style>
     .stApp {
@@ -561,13 +565,19 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-def play_voice_button(text, button_label="🔊", key_suffix=""):
+def play_voice_button(text, button_label="🔊", key_suffix="", force_lang=None):
     """Returns HTML+JS for a button that plays audio.
-       For Kreyòl (ht): uses recorded voice if exists, otherwise no button.
-       For other languages: uses browser TTS (speech synthesis)."""
-    lang = st.session_state.language
-    # For Kreyòl, try recorded voice first
-    if lang == "ht":
+       - force_lang: if provided, use that language for TTS (for fallback).
+       - For Kreyòl (ht) without force_lang: tries recorded voice.
+       - For other languages or forced lang: uses browser TTS."""
+    tts_lang = None
+    if force_lang:
+        tts_lang = force_lang
+    else:
+        tts_lang = st.session_state.language
+    
+    # For Kreyòl without forced override, try recorded voice
+    if not force_lang and tts_lang == "ht":
         voice_bytes = get_voice_for_text(text)
         if voice_bytes:
             audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -591,30 +601,30 @@ def play_voice_button(text, button_label="🔊", key_suffix=""):
             """
             return html
         else:
-            # No recorded voice for Kreyòl – no button (or you could show a disabled button)
+            # No recorded voice for Kreyòl, and no forced override -> no button
             return ""
-    else:
-        # For English, French, Spanish – use browser TTS with the corresponding language code
-        # Map language to BCP 47 code for speech synthesis
-        lang_map = {
-            "en": "en-US",
-            "fr": "fr-FR",
-            "es": "es-ES"
-        }
-        tts_lang = lang_map.get(lang, "en-US")
-        safe_text = json.dumps(text)
-        html = f"""
-        <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
-        <script>
-            document.getElementById('ttsBtn_{key_suffix}').onclick = () => {{
-                const utterance = new SpeechSynthesisUtterance({safe_text});
-                utterance.lang = '{tts_lang}';
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
-            }};
-        </script>
-        """
-        return html
+    
+    # Browser TTS for other languages
+    lang_map = {
+        "en": "en-US",
+        "fr": "fr-FR",
+        "es": "es-ES",
+        "ht": "fr-FR"  # fallback to French if somehow forced
+    }
+    tts_code = lang_map.get(tts_lang, "en-US")
+    safe_text = json.dumps(text)
+    html = f"""
+    <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
+    <script>
+        document.getElementById('ttsBtn_{key_suffix}').onclick = () => {{
+            const utterance = new SpeechSynthesisUtterance({safe_text});
+            utterance.lang = '{tts_code}';
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }};
+    </script>
+    """
+    return html
 
 # ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text, t):
@@ -681,7 +691,11 @@ def generate_response(user_input):
     if facts:
         return facts[0]
     else:
-        return t["no_facts_answer"]
+        # If current language is Kreyòl and no fact, fallback to French
+        if st.session_state.language == "ht":
+            return t["french_fallback"]
+        else:
+            return t["no_facts_answer"]
 
 def login_page():
     t = TEXTS[st.session_state.language]
@@ -920,7 +934,7 @@ def test_training(t):
             if facts:
                 st.session_state.test_answer = facts[0]
             else:
-                st.session_state.test_answer = t["no_facts_answer"]
+                st.session_state.test_answer = generate_response(q)  # use fallback logic
             st.rerun()
     if "test_answer" in st.session_state:
         st.markdown(f"**{t['test_answer_label']}**")
@@ -932,10 +946,12 @@ def test_training(t):
                 save_voice_for_text(st.session_state.test_answer, voice_up.read())
                 st.success("Voice saved")
                 st.rerun()
-        # Use the new play_voice_button which respects language
-        st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
+        # Determine if this answer is the French fallback and force language
+        t_fallback = TEXTS["ht"]["french_fallback"] if st.session_state.language == "ht" else None
+        force_lang = "fr" if (st.session_state.language == "ht" and st.session_state.test_answer == t_fallback) else None
+        st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test", force_lang=force_lang), height=50)
 
-# ---------- GESNER AI CHAT MODE (voice button visible) ----------
+# ---------- GESNER AI CHAT MODE ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -951,7 +967,13 @@ def chat_mode_interface():
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
+                # Determine if this message is the French fallback
+                force_lang = None
+                if st.session_state.language == "ht":
+                    t_ht = TEXTS["ht"]
+                    if msg["content"] == t_ht["french_fallback"]:
+                        force_lang = "fr"
+                st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}", force_lang=force_lang), height=50)
     
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
