@@ -4,5 +4,4 @@ faiss-cpu
 numpy
 pillow
 requests
-langdetect
 duckduckgo_search
