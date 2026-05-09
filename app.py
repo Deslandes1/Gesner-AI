@@ -127,8 +127,212 @@ TEXTS = {
         "image_description_result": "Description:",
         "toggle_chat_mode": "Chat Mode"
     },
-    # French and Haitian Creole translations omitted for brevity (include from previous version)
-    # In the final deployed code you must include the full TEXTS dictionary for all languages.
+    "fr": {
+        "training_app_title": "🧠 Gesner IA – Centre d'entraînement",
+        "training_subtitle": "Enseignez‑moi des faits, dictionnaires, encyclopédie.",
+        "chat_title": "💬 Gesner IA Chat",
+        "user_prefix": "🧑‍💻 Vous : ",
+        "assistant_prefix": "🤖 Gesner IA : ",
+        "send_button": "Envoyer",
+        "chat_input_placeholder": "Demandez‑moi n'importe quoi...",
+        "training_text_title": "📚 Entraînez‑moi (texte)",
+        "expand_text": "Ajouter un fait ou une paire Q/R",
+        "text_area_label": "Entrez la connaissance",
+        "train_text_button": "Entraîner",
+        "audio_title": "🎤 Entraînez‑moi avec audio",
+        "expand_audio": "Enregistrez ou téléchargez audio + transcription",
+        "audio_upload_label": "Fichier audio",
+        "transcribe_label": "Texte transcrit :",
+        "transcription_textarea": "Tapez la transcription",
+        "train_transcription_button": "Entraîner",
+        "record_btn": "🔴 Enregistrer",
+        "stop_btn": "⏹️ Arrêter",
+        "download_btn": "💾 Télécharger",
+        "image_title": "🖼️ Entraînez‑moi avec images",
+        "expand_image": "Image + description",
+        "image_upload_label": "Choisir une image",
+        "image_description_label": "Décrivez cette image",
+        "train_image_button": "Entraîner",
+        "file_title": "📄 Entraînez‑moi avec fichiers texte",
+        "expand_file": "Fichier .txt ou .md",
+        "file_upload_label": "Choisir un fichier",
+        "train_file_button": "Entraîner",
+        "knowledge_base": "📊 Base de connaissances : {count} faits",
+        "clear_chat_button": "Effacer l'historique",
+        "footer": "© GlobalInternet.py – Gesner IA",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner IA – Votre IA personnelle",
+        "built_by": "Gesner Deslandes – Ingénieur en chef",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Site web :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Licence",
+        "pricing_table": """
+| Licence | Prix (unique) |
+|---------|---------------|
+| **Personnelle** | 49 $ |
+| **Entreprise** | 299 $ |
+| **Entreprise / Code source** | 999 $ |
+""",
+        "logout_button": "🔓 Déconnexion",
+        "no_facts_answer": "Je ne connais pas encore cela. Enseignez‑moi en mode Entraînement !",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Entraîné : {text}...",
+        "warning_no_text": "Veuillez saisir du texte.",
+        "warning_no_transcription": "Veuillez d'abord saisir le texte transcrit.",
+        "warning_no_description": "Veuillez ajouter une description.",
+        "file_preview": "Aperçu du fichier",
+        "image_caption": "Image téléchargée",
+        "login_title": "Gesner IA",
+        "login_message": "Entrez le mot de passe pour accéder à Gesner IA",
+        "login_button": "Se connecter",
+        "wrong_password": "Mot de passe incorrect.",
+        "dict_title": "📖 Dictionnaires",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Mot",
+        "dict_meaning": "Signification",
+        "dict_add": "Ajouter",
+        "dict_delete": "Supprimer",
+        "voice_training_title": "🎙️ Entraînement vocal",
+        "voice_upload": "Télécharger voix (WAV/MP3)",
+        "voice_transcribed_text": "Texte parlé dans l'audio",
+        "voice_train": "Entraîner voix + texte",
+        "voice_success": "Voix et texte enregistrés !",
+        "translation_title": "🌍 Traduire et corriger",
+        "translation_source_text": "Texte à traduire (n'importe quelle langue)",
+        "translate_btn": "Traduire en Kreyòl",
+        "translation_result": "Texte traduit (modifiable)",
+        "train_translation_btn": "Entraîner avec ce texte",
+        "encyclopedia_title": "📚 Encyclopédie",
+        "encyclopedia_add": "Ajouter une entrée",
+        "encyclopedia_title_field": "Titre",
+        "encyclopedia_content": "Contenu",
+        "encyclopedia_lang": "Langue",
+        "encyclopedia_tags": "Étiquettes (virgules)",
+        "encyclopedia_save": "Enregistrer",
+        "encyclopedia_list": "Entrées existantes",
+        "voice_download": "Télécharger",
+        "test_title": "🧪 Tester l'entraînement",
+        "test_question": "Posez une question pour voir le fait stocké",
+        "test_button": "Tester",
+        "test_answer_label": "Fait stocké :",
+        "test_speak_button": "🔊 Lire",
+        "upload_voice_label": "Téléchargez votre voix pour ce texte exact",
+        "chat_mode_title": "💬 Gesner IA Chat",
+        "chat_mode_placeholder": "Demandez‑moi n'importe quoi...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Téléchargez votre voix pour cette réponse",
+        "image_upload_label": "📷 Télécharger une image",
+        "image_describe_button": "Décrire",
+        "image_description_result": "Description :",
+        "toggle_chat_mode": "Mode Chat"
+    },
+    "ht": {
+        "training_app_title": "🧠 Gesner AI – Sant Fòmasyon",
+        "training_subtitle": "Anseye m reyalite, diksyonè, ansiklopedi.",
+        "chat_title": "💬 Gesner AI Chat",
+        "user_prefix": "🧑‍💻 Ou : ",
+        "assistant_prefix": "🤖 Gesner AI : ",
+        "send_button": "Voye",
+        "chat_input_placeholder": "Pose yon kesyon...",
+        "training_text_title": "📚 Antrene m (tèks)",
+        "expand_text": "Ajoute yon reyalite oswa kesyon/repons",
+        "text_area_label": "Antre konesans lan",
+        "train_text_button": "Antrene",
+        "audio_title": "🎤 Antrene m ak odyo",
+        "expand_audio": "Anrejistre oswa chaje odyo + transkripsyon",
+        "audio_upload_label": "Chaje fichye odyo",
+        "transcribe_label": "Tèks transkri :",
+        "transcription_textarea": "Tape transkripsyon an",
+        "train_transcription_button": "Antrene",
+        "record_btn": "🔴 Anrejistre",
+        "stop_btn": "⏹️ Sispann",
+        "download_btn": "💾 Telechaje",
+        "image_title": "🖼️ Antrene m ak imaj",
+        "expand_image": "Imaj + deskripsyon",
+        "image_upload_label": "Chwazi yon imaj",
+        "image_description_label": "Dekri imaj sa a",
+        "train_image_button": "Antrene",
+        "file_title": "📄 Antrene m ak fichye tèks",
+        "expand_file": "Fichye .txt oswa .md",
+        "file_upload_label": "Chwazi yon fichye",
+        "train_file_button": "Antrene",
+        "knowledge_base": "📊 Baz konesans : {count} reyalite",
+        "clear_chat_button": "Efase listorik",
+        "footer": "© GlobalInternet.py – Gesner AI",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – AI Pèsonèl ou",
+        "built_by": "Gesner Deslandes – Enjenyè anchèf",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Sitwèb :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Pri",
+        "pricing_table": """
+| Lisans | Pri (yon fwa) |
+|--------|---------------|
+| **Pèsonèl** | $49 |
+| **Biznis** | $299 |
+| **Antrepriz / Kòd sous** | $999 |
+""",
+        "logout_button": "🔓 Dekonekte",
+        "no_facts_answer": "Mwen poko konnen sa. Tanpri anseye m nan Mòd Fòmasyon!",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Antrene : {text}...",
+        "warning_no_text": "Tanpri antre kèk tèks.",
+        "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
+        "warning_no_description": "Tanpri ajoute yon deskripsyon.",
+        "file_preview": "Aperçu fichye a",
+        "image_caption": "Imaj chaje",
+        "login_title": "Gesner AI",
+        "login_message": "Antre modpas pou konekte",
+        "login_button": "Konekte",
+        "wrong_password": "Modpas pa bon.",
+        "dict_title": "📖 Diksyonè",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Mo",
+        "dict_meaning": "Siyifikasyon",
+        "dict_add": "Ajoute",
+        "dict_delete": "Efase",
+        "voice_training_title": "🎙️ Fòmasyon vwa",
+        "voice_upload": "Chaje vwa (WAV/MP3)",
+        "voice_transcribed_text": "Tèks ki nan odyo a",
+        "voice_train": "Antrene vwa + tèks",
+        "voice_success": "Vwa ak tèks sove!",
+        "translation_title": "🌍 Tradwi epi korije",
+        "translation_source_text": "Tèks pou tradwi (nenpòt lang)",
+        "translate_btn": "Tradwi an Kreyòl",
+        "translation_result": "Tèks tradwi (kapab modifye)",
+        "train_translation_btn": "Antrene avèk tèks sa a",
+        "encyclopedia_title": "📚 Ansiklopedi",
+        "encyclopedia_add": "Ajoute yon antre",
+        "encyclopedia_title_field": "Tit",
+        "encyclopedia_content": "Kontni",
+        "encyclopedia_lang": "Lang",
+        "encyclopedia_tags": "Etikèt (vigil)",
+        "encyclopedia_save": "Sove",
+        "encyclopedia_list": "Antre ki egziste",
+        "voice_download": "Telechaje",
+        "test_title": "🧪 Tese fòmasyon",
+        "test_question": "Pose yon kesyon pou wè reyalite a",
+        "test_button": "Tese",
+        "test_answer_label": "Reyalite ki sove :",
+        "test_speak_button": "🔊 Pwononse",
+        "upload_voice_label": "Chaje vwa ou pou tèks egzak sa a",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_placeholder": "Pose yon kesyon...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Chaje vwa ou pou repons sa a",
+        "image_upload_label": "📷 Chaje yon imaj",
+        "image_describe_button": "Dekri",
+        "image_description_result": "Deskripsyon :",
+        "toggle_chat_mode": "Mòd Chat"
+    }
 }
 
 # ---------- CSS (forces all text to bright white) ----------
@@ -254,6 +458,7 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
+    """Return an HTML/JS button that plays the voice if available, else falls back to TTS."""
     voice_bytes = get_voice_for_text(text)
     if voice_bytes:
         audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -391,6 +596,7 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
+    # Toggle Chat Mode
     chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
@@ -400,6 +606,7 @@ def show_sidebar():
         st.session_state.authenticated = False
         st.rerun()
 
+# ---------- DICTIONARY MANAGER ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -593,7 +800,7 @@ def test_training(t):
             st.rerun()
         st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
 
-# ---------- GESNER AI CHAT MODE (with auto‑voice playback) ----------
+# ---------- GESNER AI CHAT MODE (manual voice button) ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -609,45 +816,18 @@ def chat_mode_interface():
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
+                # Voice button: when clicked, plays the recorded voice for this exact text
                 st.components.v1.html(play_voice_button(msg["content"], t['chat_speak_button'], f"chat_{idx}"), height=50)
-            
-            # Auto‑play voice for the latest assistant message if not already played
-            if idx == len(st.session_state.chat_messages) - 1 and not msg.get("played", False):
-                voice_bytes = get_voice_for_text(msg["content"])
-                if voice_bytes:
-                    audio_b64 = base64.b64encode(voice_bytes).decode()
-                    mime = "audio/wav"
-                    auto_html = f"""
-                    <audio id="autoPlayAudio_{idx}" style="display:none;" autoplay></audio>
-                    <script>
-                        (function() {{
-                            const audioData = "{audio_b64}";
-                            const binaryStr = atob(audioData);
-                            const bytes = new Uint8Array(binaryStr.length);
-                            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-                            const audioBlob = new Blob([bytes], {{ type: '{mime}' }});
-                            const audioUrl = URL.createObjectURL(audioBlob);
-                            const audio = document.getElementById('autoPlayAudio_{idx}');
-                            audio.src = audioUrl;
-                            audio.play().catch(e => console.log("Autoplay prevented:", e));
-                        }})();
-                    </script>
-                    """
-                    st.components.v1.html(auto_html, height=0)
-                    msg["played"] = True
-                else:
-                    # No voice, skip auto‑play
-                    pass
     
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
         if user_input.strip():
             answer = generate_response(user_input)
             st.session_state.chat_messages.append({"role": "user", "content": user_input})
-            st.session_state.chat_messages.append({"role": "assistant", "content": answer, "played": False})
+            st.session_state.chat_messages.append({"role": "assistant", "content": answer})
             st.rerun()
     
-    # Image upload section (unchanged)
+    # Image upload section
     st.markdown("---")
     st.markdown(f"## 🖼️ {t['image_title']}")
     img_file = st.file_uploader(t['image_upload_label'], type=["jpg", "jpeg", "png"], key="chat_image_upload")
@@ -673,7 +853,7 @@ def chat_mode_interface():
         st.session_state.chat_messages = []
         st.rerun()
 
-# ---------- TRAINING MODE (full dashboard) ----------
+# ---------- TRAINING MODE ----------
 def training_mode():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
