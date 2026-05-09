@@ -9,12 +9,7 @@ import requests
 import base64
 import time
 import hashlib
-from langdetect import detect, DetectorFactory
-from langdetect.lang_detect_exception import LangDetectException
 from duckduckgo_search import DDGS
-
-# Seed for consistent language detection
-DetectorFactory.seed = 0
 
 st.set_page_config(
     page_title="Gesner AI",
@@ -30,7 +25,7 @@ LANGUAGES = {
     "Español": "es"
 }
 
-# UI texts – only used for interface translation
+# UI texts – used for interface translation
 TEXTS = {
     "en": {
         "training_app_title": "🧠 Gesner AI – Training Center",
@@ -81,8 +76,6 @@ TEXTS = {
 | **Enterprise / Source** | $999 |
 """,
         "logout_button": "🔓 Logout",
-        "no_facts_answer": "I don't understand. Could you rephrase your question?",
-        "with_facts_answer": "{context}",
         "training_success": "✅ Trained: {text}...",
         "warning_no_text": "Please enter some text.",
         "warning_no_transcription": "Please enter the transcribed text first.",
@@ -133,7 +126,10 @@ TEXTS = {
         "image_upload_label": "📷 Upload image",
         "image_describe_button": "Describe",
         "image_description_result": "Description:",
-        "toggle_chat_mode": "Chat Mode"
+        "toggle_chat_mode": "Chat Mode",
+        "no_answer_en": "I don't understand. Could you rephrase your question?",
+        "no_answer_es": "No entiendo. ¿Podrías reformular tu pregunta?",
+        "no_answer_fr": "Je ne comprends pas. Pouvez-vous reformuler votre question ?"
     },
     "fr": {
         "training_app_title": "🧠 Gesner IA – Centre d'entraînement",
@@ -184,8 +180,6 @@ TEXTS = {
 | **Entreprise / Code source** | 999 $ |
 """,
         "logout_button": "🔓 Déconnexion",
-        "no_facts_answer": "Je ne comprends pas. Pouvez-vous reformuler votre question ?",
-        "with_facts_answer": "{context}",
         "training_success": "✅ Entraîné : {text}...",
         "warning_no_text": "Veuillez saisir du texte.",
         "warning_no_transcription": "Veuillez d'abord saisir le texte transcrit.",
@@ -236,7 +230,10 @@ TEXTS = {
         "image_upload_label": "📷 Télécharger une image",
         "image_describe_button": "Décrire",
         "image_description_result": "Description :",
-        "toggle_chat_mode": "Mode Chat"
+        "toggle_chat_mode": "Mode Chat",
+        "no_answer_en": "I don't understand. Could you rephrase your question?",
+        "no_answer_es": "No entiendo. ¿Podrías reformular tu pregunta?",
+        "no_answer_fr": "Je ne comprends pas. Pouvez-vous reformuler votre question ?"
     },
     "ht": {
         "training_app_title": "🧠 Gesner AI – Sant Fòmasyon",
@@ -287,8 +284,6 @@ TEXTS = {
 | **Antrepriz / Kòd sous** | $999 |
 """,
         "logout_button": "🔓 Dekonekte",
-        "no_facts_answer": "Mwen pa konprann. Èske ou ka repete kesyon an yon lòt fason?",
-        "with_facts_answer": "{context}",
         "training_success": "✅ Antrene : {text}...",
         "warning_no_text": "Tanpri antre kèk tèks.",
         "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
@@ -339,7 +334,10 @@ TEXTS = {
         "image_upload_label": "📷 Chaje yon imaj",
         "image_describe_button": "Dekri",
         "image_description_result": "Deskripsyon :",
-        "toggle_chat_mode": "Mòd Chat"
+        "toggle_chat_mode": "Mòd Chat",
+        "no_answer_en": "I don't understand. Could you rephrase your question?",
+        "no_answer_es": "No entiendo. ¿Podrías reformular tu pregunta?",
+        "no_answer_fr": "Je ne comprends pas. Pouvez-vous reformuler votre question ?"
     },
     "es": {
         "training_app_title": "🧠 Gesner AI – Centro de Entrenamiento",
@@ -390,8 +388,6 @@ TEXTS = {
 | **Empresa / Código fuente** | $999 |
 """,
         "logout_button": "🔓 Cerrar sesión",
-        "no_facts_answer": "No entiendo. ¿Podrías reformular tu pregunta?",
-        "with_facts_answer": "{context}",
         "training_success": "✅ Entrenado: {text}...",
         "warning_no_text": "Por favor ingrese texto.",
         "warning_no_transcription": "Primero ingrese el texto transcrito.",
@@ -442,7 +438,10 @@ TEXTS = {
         "image_upload_label": "📷 Subir imagen",
         "image_describe_button": "Describir",
         "image_description_result": "Descripción:",
-        "toggle_chat_mode": "Modo Chat"
+        "toggle_chat_mode": "Modo Chat",
+        "no_answer_en": "I don't understand. Could you rephrase your question?",
+        "no_answer_es": "No entiendo. ¿Podrías reformular tu pregunta?",
+        "no_answer_fr": "Je ne comprends pas. Pouvez-vous reformuler votre question ?"
     }
 }
 
@@ -542,6 +541,8 @@ if "audio_transcriptions" not in st.session_state:
     st.session_state.audio_transcriptions = []
 if "encyclopedia" not in st.session_state:
     st.session_state.encyclopedia = []
+if "chat_language" not in st.session_state:
+    st.session_state.chat_language = "en"  # default chat response language
 
 # ---------- VOICE CACHE ----------
 VOICE_CACHE_DIR = "voice_cache"
@@ -566,23 +567,10 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-def detect_language(text):
-    """Detect language of user input. Returns 'ht' for Haitian Creole if not English/French/Spanish."""
-    try:
-        lang = detect(text)
-        if lang in ['en', 'fr', 'es']:
-            return lang
-        else:
-            return 'ht'
-    except LangDetectException:
-        return 'ht'
-
-# ---------- WEB SEARCH IN FRENCH ----------
+# ---------- WEB SEARCH IN FRENCH (only used when chat_language == 'ht') ----------
 def french_web_search(query):
-    """Perform a quick web search in French and return a concise answer."""
     try:
         with DDGS() as ddgs:
-            # Search in French language
             results = list(ddgs.text(f"{query} site:fr OR lang:fr", max_results=1))
             if results:
                 return results[0]['body']
@@ -650,33 +638,47 @@ def retrieve_relevant_facts(query, k=1, threshold=1.2):
             results.append(st.session_state.texts[idx])
     return results
 
-def generate_response(user_input):
+def generate_response(user_input, target_lang):
     """
-    Returns:
-        (answer_text, is_fallback, fallback_language)
-        is_fallback: True if this is a fallback (web search) answer
-        fallback_language: always 'fr' for web search, None for trained answers
+    Returns (answer_text, is_fallback, fallback_audio_lang)
+    - target_lang: 'en', 'fr', 'es', 'ht'
+    - For 'ht': if no trained answer, fallback to French web search (fallback_audio_lang='fr')
+    - For other languages: if no trained answer, return static "I don't understand" in that language (fallback_audio_lang=target_lang)
     """
     facts = retrieve_relevant_facts(user_input, k=1)
     if facts:
-        # Trained answer – language is as stored (could be any)
         return facts[0], False, None
     else:
-        # No trained answer → French web search
-        search_result = french_web_search(user_input)
-        return search_result, True, 'fr'
+        if target_lang == "ht":
+            # Fallback to French web search
+            search_result = french_web_search(user_input)
+            return search_result, True, "fr"
+        else:
+            # Static fallback in the target language
+            t = TEXTS["en"]  # we need the fallback strings; we'll store them in TEXTS[any]['no_answer_XX']
+            # Better: access via a mapping
+            fallback_map = {
+                "en": "I don't understand. Could you rephrase your question?",
+                "fr": "Je ne comprends pas. Pouvez-vous reformuler votre question ?",
+                "es": "No entiendo. ¿Podrías reformular tu pregunta?"
+            }
+            return fallback_map.get(target_lang, "I don't understand. Could you rephrase your question?"), True, target_lang
 
-def play_voice_button(text, is_fallback, fallback_lang, button_label="🔊", key_suffix=""):
-    """Generate audio button.
-       For fallback answers: always French TTS.
-       For trained answers:
-         - if language is Kreyòl and a recorded voice exists → play that voice
-         - else if language is Kreyòl and no voice → no button (text only)
-         - else (trained answer in English/French/Spanish) → TTS in that language
+def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
+    """Returns HTML for an audio button.
+       - If fallback, use TTS in fallback_audio_lang.
+       - If trained answer:
+            - if recorded voice exists (assumed Kreyòl) -> play it
+            - else no button (text only)
     """
     if is_fallback:
-        # Fallback answer: always French TTS
-        tts_lang = "fr-FR"
+        # Use TTS in the fallback language
+        lang_map = {
+            "en": "en-US",
+            "fr": "fr-FR",
+            "es": "es-ES"
+        }
+        tts_lang = lang_map.get(fallback_audio_lang, "en-US")
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
@@ -691,18 +693,9 @@ def play_voice_button(text, is_fallback, fallback_lang, button_label="🔊", key
         """
         return html
     else:
-        # Trained answer – we need to know its language (assumed from context)
-        # For simplicity, we use the stored detection: if the answer text contains
-        # common French words? Too complex. Instead we rely on the fact that
-        # trained answers are stored exactly as they were trained. We'll try to detect
-        # the language of the answer text, but this is imperfect. Better: we store language
-        # during training. However, to keep things simple and consistent with previous behaviour,
-        # we assume that if the user asked in Kreyòl and got a trained answer, the answer is Kreyòl.
-        # Since we don't have that context here, we'll fallback to checking for recorded voice.
-        # For better UX, we use the recorded voice if available (Kreyòl), else TTS.
+        # Trained answer: play recorded voice if exists
         voice_bytes = get_voice_for_text(text)
         if voice_bytes:
-            # Play recorded voice (assumed Kreyòl)
             audio_b64 = base64.b64encode(voice_bytes).decode()
             mime = "audio/wav"
             html = f"""
@@ -724,7 +717,6 @@ def play_voice_button(text, is_fallback, fallback_lang, button_label="🔊", key
             """
             return html
         else:
-            # No recorded voice – no button (text only)
             return ""
 
 def login_page():
@@ -747,10 +739,12 @@ def login_page():
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 def show_sidebar():
-    # UI language selection – only affects interface texts, NOT chat language
+    # UI language selection also sets chat response language
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.sidebar.selectbox("🌐 Interface Language", lang_names, key="ui_lang_selector")
-    st.session_state.ui_language = LANGUAGES[selected_lang_name]
+    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
+    selected_lang_code = LANGUAGES[selected_lang_name]
+    st.session_state.ui_language = selected_lang_code
+    st.session_state.chat_language = selected_lang_code  # chat replies follow sidebar language
     t = TEXTS[st.session_state.ui_language]
 
     st.sidebar.markdown("""
@@ -842,7 +836,7 @@ def save_encyclopedia():
 
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    st.info("🎙️ Upload your voice for Kreyòl phrases. It will be used when Gesner AI answers that exact text. For unanswered questions, a French AI will search online and reply in French with French TTS.")
+    st.info("🎙️ Upload your voice for Kreyòl phrases. It will be used when Gesner AI answers that exact text.")
     
     recorder_html = f"""
     <div id="recorder-container">
@@ -955,7 +949,8 @@ def test_training(t):
     q = st.text_input(t['test_question'])
     if st.button(t['test_button'], use_container_width=True):
         if q.strip():
-            answer, is_fallback, fallback_lang = generate_response(q)
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(q, target_lang)
             st.session_state.test_answer = answer
             st.session_state.test_is_fallback = is_fallback
             st.session_state.test_fallback_lang = fallback_lang
@@ -970,7 +965,6 @@ def test_training(t):
                 save_voice_for_text(st.session_state.test_answer, voice_up.read())
                 st.success("Voice saved")
                 st.rerun()
-        # Play button
         btn_html = play_voice_button(
             st.session_state.test_answer,
             st.session_state.test_is_fallback,
@@ -1013,7 +1007,8 @@ def chat_mode_interface():
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
         if user_input.strip():
-            answer, is_fallback, fallback_lang = generate_response(user_input)
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(user_input, target_lang)
             st.session_state.chat_messages.append({"role": "user", "content": user_input})
             st.session_state.chat_messages.append({
                 "role": "assistant",
@@ -1051,7 +1046,8 @@ def training_mode():
     user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
     if st.button(t["send_button"], use_container_width=True):
         if user_input.strip():
-            answer, is_fallback, fallback_lang = generate_response(user_input)
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(user_input, target_lang)
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             st.session_state.conversation_history.append({"role": "assistant", "content": answer})
             st.rerun()
@@ -1118,11 +1114,15 @@ def main_app():
 # ---------- ROUTING ----------
 if "ui_language" not in st.session_state:
     st.session_state.ui_language = "en"
+if "chat_language" not in st.session_state:
+    st.session_state.chat_language = "en"
 
 if not st.session_state.authenticated:
+    # On login page, we can also set a language selector
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.selectbox("🌐 Interface Language", lang_names, key="login_ui_lang")
+    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang")
     st.session_state.ui_language = LANGUAGES[selected_lang_name]
+    st.session_state.chat_language = st.session_state.ui_language
     login_page()
 else:
     main_app()
