@@ -123,7 +123,15 @@ TEXTS = {
         "test_button": "Ask Gesner AI",
         "test_answer_label": "Retrieved Answer (exact text I learned):",
         "test_speak_button": "🔊 Speak Answer",
-        "upload_voice_label": "Upload your voice recording of this exact answer (WAV/MP3)"
+        "upload_voice_label": "Upload your voice recording of this exact answer (WAV/MP3)",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_question": "Ask me anything:",
+        "chat_speak_button": "🔊 Prononse repons lan",
+        "chat_upload_voice": "Upload your voice for this answer (WAV/MP3)",
+        "image_upload": "Upload an image",
+        "image_describe_button": "Describe this image",
+        "image_description_result": "Image description:",
+        "toggle_chat_mode": "Chat Mode"
     },
     "fr": {
         "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
@@ -225,7 +233,15 @@ TEXTS = {
         "test_button": "Demander à Gesner IA",
         "test_answer_label": "Réponse récupérée (texte exact que j’ai appris) :",
         "test_speak_button": "🔊 Lire la réponse",
-        "upload_voice_label": "Téléchargez votre enregistrement vocal de cette réponse exacte (WAV/MP3)"
+        "upload_voice_label": "Téléchargez votre enregistrement vocal de cette réponse exacte (WAV/MP3)",
+        "chat_mode_title": "💬 Gesner IA Chat",
+        "chat_mode_question": "Posez une question :",
+        "chat_speak_button": "🔊 Prononse repons lan",
+        "chat_upload_voice": "Téléchargez votre voix pour cette réponse (WAV/MP3)",
+        "image_upload": "Téléchargez une image",
+        "image_describe_button": "Décrire cette image",
+        "image_description_result": "Description de l’image :",
+        "toggle_chat_mode": "Mode Chat"
     },
     "ht": {
         "app_title": "🧠 Gesner AI – Antrene AI Pèsonèl Ayisyen w la",
@@ -327,7 +343,15 @@ TEXTS = {
         "test_button": "Mande Gesner AI",
         "test_answer_label": "Repons ki te jwenn (tèks egzak mwen aprann):",
         "test_speak_button": "🔊 Pwononse repons lan",
-        "upload_voice_label": "Chaje vwa ou k ap li repons egzak sa a (WAV/MP3)"
+        "upload_voice_label": "Chaje vwa ou k ap li repons egzak sa a (WAV/MP3)",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_question": "Pose yon kesyon:",
+        "chat_speak_button": "🔊 Pwononse repons lan",
+        "chat_upload_voice": "Chaje vwa ou pou repons sa a (WAV/MP3)",
+        "image_upload": "Chaje yon imaj",
+        "image_describe_button": "Dekri imaj sa a",
+        "image_description_result": "Deskripsyon imaj la:",
+        "toggle_chat_mode": "Mòd Chat"
     }
 }
 
@@ -414,6 +438,8 @@ if "embedding_model" not in st.session_state:
     st.session_state.texts = []
 if "language" not in st.session_state:
     st.session_state.language = "en"
+if "chat_mode" not in st.session_state:
+    st.session_state.chat_mode = False
 
 # Data structures
 if "dictionaries" not in st.session_state:
@@ -552,6 +578,13 @@ def show_sidebar():
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
+    
+    # Toggle between Training Mode and Chat Mode
+    chat_mode = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
+    if chat_mode != st.session_state.chat_mode:
+        st.session_state.chat_mode = chat_mode
+        st.rerun()
+    
     if st.sidebar.button(t['logout_button'], use_container_width=True):
         logout()
 
@@ -747,7 +780,7 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
-# ---------- TEST TRAINING SECTION (fixed for own voice playback) ----------
+# ---------- TEST TRAINING SECTION ----------
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
     test_question = st.text_input(t['test_question'], key="test_question")
@@ -765,17 +798,13 @@ def test_training(t):
         st.markdown(f"**{t['test_answer_label']}**")
         st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
         
-        # File uploader for user's own voice recording
         uploaded_voice = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice_upload")
         if uploaded_voice is not None:
             st.session_state.user_voice_bytes = uploaded_voice.read()
             st.success("Voice recording loaded. Click the button below to play it.")
         
         if st.session_state.get("user_voice_bytes"):
-            # Convert bytes to base64 for embedding in HTML
             audio_b64 = base64.b64encode(st.session_state.user_voice_bytes).decode()
-            # Determine mime type from uploaded file name? We'll assume WAV for simplicity; but better to get extension.
-            # We'll use the file extension from the uploaded file if available, or default to audio/wav.
             mime_type = "audio/wav"
             if uploaded_voice and uploaded_voice.name.endswith('.mp3'):
                 mime_type = "audio/mpeg"
@@ -800,7 +829,6 @@ def test_training(t):
             """
             st.components.v1.html(play_button_html, height=60)
         else:
-            # Fallback to speech synthesis
             speak_button_html = f"""
             <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
             <script>
@@ -814,79 +842,201 @@ def test_training(t):
             """
             st.components.v1.html(speak_button_html, height=50)
 
+# ---------- CHAT MODE INTERFACE ----------
+def chat_mode():
+    t = TEXTS[st.session_state.language]
+    st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>💬 {t['chat_mode_title']}</h1>", unsafe_allow_html=True)
+    
+    # Chat input
+    user_question = st.text_input(t['chat_mode_question'], key="chat_question")
+    if st.button(t['send_button'], use_container_width=True, key="chat_send"):
+        if user_question.strip():
+            answer = generate_response(user_question)
+            st.session_state.chat_answer = answer
+            st.session_state.chat_question = user_question
+            if "chat_voice_bytes" in st.session_state:
+                del st.session_state.chat_voice_bytes
+            st.rerun()
+    
+    if "chat_answer" in st.session_state:
+        st.markdown(f"**{t['test_answer_label']}**")
+        st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.chat_answer}</div>', unsafe_allow_html=True)
+        
+        # Voice upload for this specific answer
+        uploaded_voice = st.file_uploader(t['chat_upload_voice'], type=["wav", "mp3"], key="chat_voice_upload")
+        if uploaded_voice is not None:
+            st.session_state.chat_voice_bytes = uploaded_voice.read()
+            st.success("Voice loaded. Click the button below to hear it.")
+        
+        if st.session_state.get("chat_voice_bytes"):
+            audio_b64 = base64.b64encode(st.session_state.chat_voice_bytes).decode()
+            mime_type = "audio/wav"
+            if uploaded_voice and uploaded_voice.name.endswith('.mp3'):
+                mime_type = "audio/mpeg"
+            play_button_html = f"""
+            <button id="playChatVoice" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['chat_speak_button']}</button>
+            <audio id="chatAudio" style="display:none;"></audio>
+            <script>
+                const audioData = "{audio_b64}";
+                const binaryStr = atob(audioData);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {{
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }}
+                const audioBlob = new Blob([bytes], {{ type: '{mime_type}' }});
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = document.getElementById('chatAudio');
+                audio.src = audioUrl;
+                document.getElementById('playChatVoice').onclick = () => {{
+                    audio.play();
+                }};
+            </script>
+            """
+            st.components.v1.html(play_button_html, height=60)
+        else:
+            # Fallback: use same test button logic but without voice
+            speak_button_html = f"""
+            <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['chat_speak_button']}</button>
+            <script>
+                document.getElementById('speakAnswerBtn').onclick = () => {{
+                    const text = {json.dumps(st.session_state.chat_answer)};
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                }};
+            </script>
+            """
+            st.components.v1.html(speak_button_html, height=50)
+    
+    # Image upload and description
+    st.markdown("---")
+    st.markdown(f"## {t['image_title']}")
+    image_file = st.file_uploader(t['image_upload'], type=["jpg", "jpeg", "png"], key="chat_image")
+    if image_file:
+        image = Image.open(image_file)
+        st.image(image, caption="Uploaded Image", width=300)
+        if st.button(t['image_describe_button'], use_container_width=True):
+            # Use a free image captioning API (or a local model). For simplicity, we'll use a placeholder.
+            # In a real implementation, you could call a service like HuggingFace's BLIP, but for demo we'll simulate.
+            # We'll use a simple captioning API if possible; but to avoid external dependencies, we'll use a generic response.
+            # The user can then upload voice for this description.
+            description = "This is a description of the image. (You can replace this with an actual image captioning model.)"
+            st.session_state.image_description = description
+            st.markdown(f"**{t['image_description_result']}** {description}")
+            # Option to train this description
+            if st.button("Train AI with this description", use_container_width=True):
+                add_to_training(description, t)
+                st.success("Description added to AI knowledge.")
+            # Voice upload for description
+            desc_voice = st.file_uploader("Upload voice for this description (WAV/MP3)", type=["wav", "mp3"], key="desc_voice")
+            if desc_voice:
+                st.session_state.desc_voice_bytes = desc_voice.read()
+                st.success("Voice loaded. Click button to play.")
+            if st.session_state.get("desc_voice_bytes"):
+                audio_b64_desc = base64.b64encode(st.session_state.desc_voice_bytes).decode()
+                mime_type_desc = "audio/wav"
+                if desc_voice and desc_voice.name.endswith('.mp3'):
+                    mime_type_desc = "audio/mpeg"
+                play_desc_html = f"""
+                <button id="playDescVoice" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">🔊 Hear description</button>
+                <audio id="descAudio" style="display:none;"></audio>
+                <script>
+                    const audioDataDesc = "{audio_b64_desc}";
+                    const binaryStrDesc = atob(audioDataDesc);
+                    const bytesDesc = new Uint8Array(binaryStrDesc.length);
+                    for (let i = 0; i < binaryStrDesc.length; i++) {{
+                        bytesDesc[i] = binaryStrDesc.charCodeAt(i);
+                    }}
+                    const audioBlobDesc = new Blob([bytesDesc], {{ type: '{mime_type_desc}' }});
+                    const audioUrlDesc = URL.createObjectURL(audioBlobDesc);
+                    const audioDesc = document.getElementById('descAudio');
+                    audioDesc.src = audioUrlDesc;
+                    document.getElementById('playDescVoice').onclick = () => {{
+                        audioDesc.play();
+                    }};
+                </script>
+                """
+                st.components.v1.html(play_desc_html, height=60)
+
 # ---------- MAIN APP ----------
 def main_app():
     t = TEXTS[st.session_state.language]
     show_sidebar()
     load_previous_training()
 
-    st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
+    if not st.session_state.chat_mode:
+        # Training Mode (original full dashboard)
+        st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
 
-    # --- Chat Interface ---
-    st.markdown(f"## {t['chat_title']}")
-    for msg in st.session_state.conversation_history:
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
+        # --- Chat Interface (original) ---
+        st.markdown(f"## {t['chat_title']}")
+        for msg in st.session_state.conversation_history:
+            if msg["role"] == "user":
+                st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
 
-    user_input = st.text_input(t["chat_input_placeholder"], key="chat_input")
-    if st.button(t["send_button"], use_container_width=True):
-        if user_input.strip():
-            st.session_state.conversation_history.append({"role": "user", "content": user_input})
-            response = generate_response(user_input)
-            st.session_state.conversation_history.append({"role": "assistant", "content": response})
+        user_input = st.text_input(t["chat_input_placeholder"], key="chat_input")
+        if st.button(t["send_button"], use_container_width=True):
+            if user_input.strip():
+                st.session_state.conversation_history.append({"role": "user", "content": user_input})
+                response = generate_response(user_input)
+                st.session_state.conversation_history.append({"role": "assistant", "content": response})
+                st.rerun()
+
+        # --- Existing Training Sections ---
+        st.markdown("---")
+        st.markdown(f"## {t['training_text_title']}")
+        with st.expander(t["expand_text"]):
+            training_text = st.text_area(t["text_area_label"])
+            if st.button(t["train_text_button"], use_container_width=True):
+                add_to_training(training_text, t)
+
+        st.markdown(f"## {t['audio_title']}")
+        with st.expander(t["expand_audio"]):
+            voice_training(t)
+
+        st.markdown(f"## {t['image_title']}")
+        with st.expander(t["expand_image"]):
+            image_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
+            image_description = st.text_area(t["image_description_label"])
+            if image_file is not None:
+                st.image(image_file, caption=t['image_caption'], width=200)
+                if st.button(t["train_image_button"], use_container_width=True):
+                    if image_description:
+                        add_to_training(image_description, t)
+                    else:
+                        st.warning(t['warning_no_description'])
+
+        st.markdown(f"## {t['file_title']}")
+        with st.expander(t["expand_file"]):
+            text_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
+            if text_file is not None:
+                content = text_file.read().decode("utf-8")
+                st.text_area(t['file_preview'], content, height=150)
+                if st.button(t["train_file_button"], use_container_width=True):
+                    add_to_training(content, t)
+
+        # --- New Features (Dictionaries, Translation, Encyclopedia, Test) ---
+        st.markdown("---")
+        dictionary_manager(t)
+        st.markdown("---")
+        translation_and_correction(t)
+        st.markdown("---")
+        encyclopedia_manager(t)
+        st.markdown("---")
+        test_training(t)
+
+        st.markdown("---")
+        st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
+        if st.button(t["clear_chat_button"], use_container_width=True):
+            st.session_state.conversation_history = []
             st.rerun()
 
-    # --- Existing Training Sections ---
-    st.markdown("---")
-    st.markdown(f"## {t['training_text_title']}")
-    with st.expander(t["expand_text"]):
-        training_text = st.text_area(t["text_area_label"])
-        if st.button(t["train_text_button"], use_container_width=True):
-            add_to_training(training_text, t)
-
-    st.markdown(f"## {t['audio_title']}")
-    with st.expander(t["expand_audio"]):
-        voice_training(t)
-
-    st.markdown(f"## {t['image_title']}")
-    with st.expander(t["expand_image"]):
-        image_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
-        image_description = st.text_area(t["image_description_label"])
-        if image_file is not None:
-            st.image(image_file, caption=t['image_caption'], width=200)
-            if st.button(t["train_image_button"], use_container_width=True):
-                if image_description:
-                    add_to_training(image_description, t)
-                else:
-                    st.warning(t['warning_no_description'])
-
-    st.markdown(f"## {t['file_title']}")
-    with st.expander(t["expand_file"]):
-        text_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
-        if text_file is not None:
-            content = text_file.read().decode("utf-8")
-            st.text_area(t['file_preview'], content, height=150)
-            if st.button(t["train_file_button"], use_container_width=True):
-                add_to_training(content, t)
-
-    # --- New Features ---
-    st.markdown("---")
-    dictionary_manager(t)
-    st.markdown("---")
-    translation_and_correction(t)
-    st.markdown("---")
-    encyclopedia_manager(t)
-    st.markdown("---")
-    test_training(t)
-
-    st.markdown("---")
-    st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
-    if st.button(t["clear_chat_button"], use_container_width=True):
-        st.session_state.conversation_history = []
-        st.rerun()
+    else:
+        # Chat Mode (clean interface)
+        chat_mode()
 
     st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
 
