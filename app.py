@@ -74,7 +74,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Logout",
         "no_facts_answer": "I don't have specific training on that yet. Please teach me by using the Train section below! Your question: {question}",
-        "with_facts_answer": "Based on what I've learned:\n{context}\n\nTo answer your question: {question} – does that help?",
+        "with_facts_answer": "{context}",
         "training_success": "✅ Trained: {text}...",
         "warning_no_text": "Please enter some text to train.",
         "warning_no_transcription": "Please enter the transcribed text first.",
@@ -117,7 +117,12 @@ TEXTS = {
         "encyclopedia_tags": "Tags (comma separated)",
         "encyclopedia_save": "Save Entry",
         "encyclopedia_list": "Existing Entries",
-        "voice_download": "Download Recording"
+        "voice_download": "Download Recording",
+        "test_title": "🧪 Test Your Training",
+        "test_question": "Ask a question to see exactly what I learned and hear it spoken:",
+        "test_button": "Ask Gesner AI",
+        "test_answer_label": "Retrieved Answer (exact text I learned):",
+        "test_speak_button": "🔊 Speak Answer"
     },
     "fr": {
         "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
@@ -170,7 +175,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Déconnexion",
         "no_facts_answer": "Je n’ai pas encore d’apprentissage spécifique sur ce sujet. Veuillez m’enseigner en utilisant la section Entraînement ci‑dessous ! Votre question : {question}",
-        "with_facts_answer": "D’après ce que j’ai appris :\n{context}\n\nPour répondre à votre question : {question} – cela vous aide‑t‑il ?",
+        "with_facts_answer": "{context}",
         "training_success": "✅ Entraîné : {text}...",
         "warning_no_text": "Veuillez saisir du texte à entraîner.",
         "warning_no_transcription": "Veuillez d’abord saisir le texte transcrit.",
@@ -213,7 +218,12 @@ TEXTS = {
         "encyclopedia_tags": "Étiquettes (séparées par des virgules)",
         "encyclopedia_save": "Enregistrer l’entrée",
         "encyclopedia_list": "Entrées existantes",
-        "voice_download": "Télécharger l’enregistrement"
+        "voice_download": "Télécharger l’enregistrement",
+        "test_title": "🧪 Tester votre entraînement",
+        "test_question": "Posez une question pour voir exactement ce que j’ai appris et l’entendre:",
+        "test_button": "Demander à Gesner IA",
+        "test_answer_label": "Réponse récupérée (texte exact que j’ai appris) :",
+        "test_speak_button": "🔊 Lire la réponse"
     },
     "ht": {
         "app_title": "🧠 Gesner AI – Antrene AI Pèsonèl Ayisyen w la",
@@ -266,7 +276,7 @@ TEXTS = {
 """,
         "logout_button": "🔓 Dekonekte",
         "no_facts_answer": "Mwen poko genyen antreman espesifik sou sa. Tanpri anseye m nan seksyon Antreman anba a! Kesyon ou a : {question}",
-        "with_facts_answer": "Dapre sa m te aprann:\n{context}\n\nPou reponn kesyon ou a : {question} – èske sa ede w ?",
+        "with_facts_answer": "{context}",
         "training_success": "✅ Antrene : {text}...",
         "warning_no_text": "Tanpri antre kèk tèks pou antrene.",
         "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
@@ -309,11 +319,16 @@ TEXTS = {
         "encyclopedia_tags": "Etikèt (separe ak vigil)",
         "encyclopedia_save": "Sove antre a",
         "encyclopedia_list": "Antre ki egziste deja",
-        "voice_download": "Telechaje anrejistreman an"
+        "voice_download": "Telechaje anrejistreman an",
+        "test_title": "🧪 Tese fòmasyon ou",
+        "test_question": "Pose yon kesyon pou wè egzakteman sa m aprann epi tande l:",
+        "test_button": "Mande Gesner AI",
+        "test_answer_label": "Repons ki te jwenn (tèks egzak mwen aprann):",
+        "test_speak_button": "🔊 Pwononse repons lan"
     }
 }
 
-# ---------- CUSTOM CSS (unchanged) ----------
+# ---------- CUSTOM CSS (same as before) ----------
 st.markdown("""
 <style>
     .stApp {
@@ -397,11 +412,9 @@ if "embedding_model" not in st.session_state:
 if "language" not in st.session_state:
     st.session_state.language = "en"
 
-# New data structures
+# Data structures
 if "dictionaries" not in st.session_state:
-    st.session_state.dictionaries = {
-        "ht": {}, "fr": {}, "en": {}
-    }
+    st.session_state.dictionaries = {"ht": {}, "fr": {}, "en": {}}
     if os.path.exists("dictionaries.json"):
         with open("dictionaries.json", "r") as f:
             st.session_state.dictionaries = json.load(f)
@@ -490,11 +503,11 @@ def retrieve_relevant_facts(query, k=3):
     return results
 
 def generate_response(user_input):
-    facts = retrieve_relevant_facts(user_input, k=3)
+    facts = retrieve_relevant_facts(user_input, k=1)  # only top 1 for exact match
     t = TEXTS[st.session_state.language]
     if facts:
-        context = "\n".join(facts)
-        return t["with_facts_answer"].format(context=context, question=user_input)
+        # return only the retrieved fact, no extra text
+        return facts[0]
     else:
         return t["no_facts_answer"].format(question=user_input)
 
@@ -579,11 +592,9 @@ def dictionary_manager(t):
                 save_dictionaries()
                 st.rerun()
 
-# ---------- UPDATED VOICE TRAINING WITH RECORDER ----------
+# ---------- VOICE TRAINING ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    # Use a container with HTML/JS recorder, then upload button to save the recorded blob.
-    # The user can also use the regular file uploader.
     st.markdown("### 🎙️ Record directly in your browser")
     recorder_html = f"""
     <div id="recorder-container">
@@ -618,7 +629,6 @@ def voice_training(t):
                 downloadLink.style.display = 'block';
                 audioChunks = [];
                 statusP.innerText = '';
-                // Optionally, create a hidden file input to populate? Not needed; user can download then upload.
             }};
             mediaRecorder.start();
             recordBtn.disabled = true;
@@ -644,7 +654,6 @@ def voice_training(t):
         if st.button(t['voice_train'], key="train_audio"):
             if transcribed_text.strip():
                 add_to_training(transcribed_text, t)
-                # store audio for future reference
                 audio_bytes = audio_file.read()
                 audio_filename = f"voice_{int(time.time())}.wav"
                 with open(audio_filename, "wb") as f:
@@ -722,6 +731,36 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
+# ---------- TEST TRAINING SECTION ----------
+def test_training(t):
+    st.markdown(f"## {t['test_title']}")
+    test_question = st.text_input(t['test_question'], key="test_question")
+    if st.button(t['test_button'], use_container_width=True, key="test_btn"):
+        if test_question.strip():
+            facts = retrieve_relevant_facts(test_question, k=1)
+            if facts:
+                st.session_state.test_answer = facts[0]
+            else:
+                st.session_state.test_answer = t["no_facts_answer"].format(question=test_question)
+            st.rerun()
+    if "test_answer" in st.session_state:
+        st.markdown(f"**{t['test_answer_label']}**")
+        st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
+        # Speak button using JavaScript
+        speak_button_html = f"""
+        <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['test_speak_button']}</button>
+        <script>
+            document.getElementById('speakAnswerBtn').onclick = () => {{
+                const text = {json.dumps(st.session_state.test_answer)};
+                const utterance = new SpeechSynthesisUtterance(text);
+                // Try to use Haitian Creole voice if available
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            }};
+        </script>
+        """
+        st.components.v1.html(speak_button_html, height=50)
+
 # ---------- MAIN APP ----------
 def main_app():
     t = TEXTS[st.session_state.language]
@@ -731,7 +770,7 @@ def main_app():
     st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
 
-    # --- Chat Interface ---
+    # --- Chat Interface (existing) ---
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -757,7 +796,7 @@ def main_app():
 
     st.markdown(f"## {t['audio_title']}")
     with st.expander(t["expand_audio"]):
-        voice_training(t)  # integrated recorder + uploader
+        voice_training(t)
 
     st.markdown(f"## {t['image_title']}")
     with st.expander(t["expand_image"]):
@@ -780,13 +819,15 @@ def main_app():
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
 
-    # --- New Features ---
+    # --- New Features: Dictionaries, Translation, Encyclopedia, Test ---
     st.markdown("---")
     dictionary_manager(t)
     st.markdown("---")
     translation_and_correction(t)
     st.markdown("---")
     encyclopedia_manager(t)
+    st.markdown("---")
+    test_training(t)
 
     st.markdown("---")
     st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
