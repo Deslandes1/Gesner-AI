@@ -36,11 +36,15 @@ TEXTS = {
         "text_area_label": "Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')",
         "train_text_button": "Train with this text",
         "audio_title": "🎤 Train Me with Audio",
-        "expand_audio": "Upload an audio file (you'll need to transcribe manually – or use a service)",
-        "audio_upload_label": "Choose an audio file",
-        "transcribe_label": "After listening, type the transcription below to train me:",
-        "transcription_textarea": "Transcribed text from the audio",
+        "expand_audio": "Record or upload an audio file, then type the transcription to train me.",
+        "audio_upload_label": "Upload Audio File",
+        "transcribe_label": "Transcribed text (what the audio says):",
+        "transcription_textarea": "Type the transcription here",
         "train_transcription_button": "Train with this transcription",
+        "record_btn": "🔴 Record Audio",
+        "stop_btn": "⏹️ Stop Recording",
+        "download_btn": "💾 Download Recording (WAV)",
+        "recording_placeholder": "Recording... will appear here",
         "image_title": "🖼️ Train Me with Images",
         "expand_image": "Upload an image + description",
         "image_upload_label": "Choose an image",
@@ -112,7 +116,8 @@ TEXTS = {
         "encyclopedia_lang": "Language",
         "encyclopedia_tags": "Tags (comma separated)",
         "encyclopedia_save": "Save Entry",
-        "encyclopedia_list": "Existing Entries"
+        "encyclopedia_list": "Existing Entries",
+        "voice_download": "Download Recording"
     },
     "fr": {
         "app_title": "🧠 Gesner IA – Entraînez votre IA personnelle haïtienne",
@@ -127,11 +132,15 @@ TEXTS = {
         "text_area_label": "Entrez une connaissance (ex. 'La capitale d'Haïti est Port‑au‑Prince')",
         "train_text_button": "Entraîner avec ce texte",
         "audio_title": "🎤 Entraînez‑moi avec l’audio",
-        "expand_audio": "Téléchargez un fichier audio (vous devrez transcrire manuellement – ou utiliser un service)",
-        "audio_upload_label": "Choisissez un fichier audio",
-        "transcribe_label": "Après avoir écouté, saisissez la transcription ci‑dessous pour m’entraîner :",
-        "transcription_textarea": "Texte transcrit à partir de l’audio",
+        "expand_audio": "Enregistrez ou téléchargez un fichier audio, puis tapez la transcription.",
+        "audio_upload_label": "Télécharger un fichier audio",
+        "transcribe_label": "Texte transcrit (ce que dit l’audio) :",
+        "transcription_textarea": "Tapez la transcription ici",
         "train_transcription_button": "Entraîner avec cette transcription",
+        "record_btn": "🔴 Enregistrer",
+        "stop_btn": "⏹️ Arrêter",
+        "download_btn": "💾 Télécharger l’enregistrement (WAV)",
+        "recording_placeholder": "Enregistrement... apparaîtra ici",
         "image_title": "🖼️ Entraînez‑moi avec des images",
         "expand_image": "Téléchargez une image + description",
         "image_upload_label": "Choisissez une image",
@@ -203,7 +212,8 @@ TEXTS = {
         "encyclopedia_lang": "Langue",
         "encyclopedia_tags": "Étiquettes (séparées par des virgules)",
         "encyclopedia_save": "Enregistrer l’entrée",
-        "encyclopedia_list": "Entrées existantes"
+        "encyclopedia_list": "Entrées existantes",
+        "voice_download": "Télécharger l’enregistrement"
     },
     "ht": {
         "app_title": "🧠 Gesner AI – Antrene AI Pèsonèl Ayisyen w la",
@@ -218,11 +228,15 @@ TEXTS = {
         "text_area_label": "Antre yon konesans (egzanp: 'Kapital Ayiti se Pòtoprens')",
         "train_text_button": "Antrene ak tèks sa a",
         "audio_title": "🎤 Antrene m ak odyo",
-        "expand_audio": "Chaje yon fichye odyo (w ap bezwen transkri a men – oswa itilize yon sèvis)",
-        "audio_upload_label": "Chwazi yon fichye odyo",
-        "transcribe_label": "Apre w fin koute, ekri transkripsyon an anba a pou antrene m :",
-        "transcription_textarea": "Tèks transkri apati odyo a",
+        "expand_audio": "Anrejistre oswa chaje yon fichye odyo, epi tape transkripsyon an.",
+        "audio_upload_label": "Chaje yon fichye odyo",
+        "transcribe_label": "Tèks transkri (sa odyo a di) :",
+        "transcription_textarea": "Tape transkripsyon an isit la",
         "train_transcription_button": "Antrene ak transkripsyon sa a",
+        "record_btn": "🔴 Anrejistre",
+        "stop_btn": "⏹️ Sispann",
+        "download_btn": "💾 Telechaje anrejistreman an (WAV)",
+        "recording_placeholder": "Anrejistreman... ap parèt isit la",
         "image_title": "🖼️ Antrene m ak imaj",
         "expand_image": "Chaje yon imaj + deskripsyon",
         "image_upload_label": "Chwazi yon imaj",
@@ -294,7 +308,8 @@ TEXTS = {
         "encyclopedia_lang": "Lang",
         "encyclopedia_tags": "Etikèt (separe ak vigil)",
         "encyclopedia_save": "Sove antre a",
-        "encyclopedia_list": "Antre ki egziste deja"
+        "encyclopedia_list": "Antre ki egziste deja",
+        "voice_download": "Telechaje anrejistreman an"
     }
 }
 
@@ -384,7 +399,6 @@ if "language" not in st.session_state:
 
 # New data structures
 if "dictionaries" not in st.session_state:
-    # dictionaries: each is dict word->meaning
     st.session_state.dictionaries = {
         "ht": {}, "fr": {}, "en": {}
     }
@@ -512,7 +526,7 @@ def show_sidebar():
     if st.sidebar.button(t['logout_button'], use_container_width=True):
         logout()
 
-# ---------- NEW FEATURE: DICTIONARY MANAGER ----------
+# ---------- DICTIONARY MANAGER ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -526,7 +540,6 @@ def dictionary_manager(t):
                 save_dictionaries()
                 st.success(f"Added {word_ht}")
                 st.rerun()
-        # Display existing
         for w, m in list(st.session_state.dictionaries["ht"].items()):
             st.text(f"{w}: {m}")
             if st.button(f"{t['dict_delete']} {w}", key=f"del_ht_{w}"):
@@ -566,21 +579,73 @@ def dictionary_manager(t):
                 save_dictionaries()
                 st.rerun()
 
-# ---------- NEW FEATURE: VOICE TRAINING ----------
+# ---------- UPDATED VOICE TRAINING WITH RECORDER ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    # We'll use an audio recorder via HTML/JS (simpler to explanation)
-    # For simplicity, we use file uploader and a text area for transcription.
-    audio_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3", "m4a", "ogg", "webm"])
+    # Use a container with HTML/JS recorder, then upload button to save the recorded blob.
+    # The user can also use the regular file uploader.
+    st.markdown("### 🎙️ Record directly in your browser")
+    recorder_html = f"""
+    <div id="recorder-container">
+        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer;">{t['record_btn']}</button>
+        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px; color:white; margin-left:10px; cursor:pointer;">{t['stop_btn']}</button>
+        <p id="recordingStatus" style="color:white;"></p>
+        <audio id="audioPlayback" controls style="width:100%; margin-top:10px;"></audio>
+        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">{t['voice_download']}</a>
+    </div>
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusP = document.getElementById('recordingStatus');
+        const audioPlayback = document.getElementById('audioPlayback');
+        const downloadLink = document.getElementById('downloadLink');
+
+        recordBtn.onclick = async () => {{
+            const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = event => {{
+                audioChunks.push(event.data);
+            }};
+            mediaRecorder.onstop = () => {{
+                const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayback.src = audioUrl;
+                downloadLink.href = audioUrl;
+                downloadLink.download = 'recording.wav';
+                downloadLink.style.display = 'block';
+                audioChunks = [];
+                statusP.innerText = '';
+                // Optionally, create a hidden file input to populate? Not needed; user can download then upload.
+            }};
+            mediaRecorder.start();
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+            statusP.innerText = 'Recording...';
+        }};
+
+        stopBtn.onclick = () => {{
+            mediaRecorder.stop();
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
+            statusP.innerText = 'Recording stopped. You can download the file and then upload it below.';
+        }};
+    </script>
+    """
+    st.components.v1.html(recorder_html, height=200)
+    
+    st.markdown("### 📂 Or upload an audio file")
+    audio_file = st.file_uploader(t['audio_upload_label'], type=["wav", "mp3", "m4a", "ogg", "webm"], key="audio_train")
     if audio_file:
         st.audio(audio_file, format="audio/wav")
-        transcribed_text = st.text_area(t['voice_transcribed_text'], height=100)
-        if st.button(t['voice_train']):
+        transcribed_text = st.text_area(t['voice_transcribed_text'], height=100, key="audio_transcript")
+        if st.button(t['voice_train'], key="train_audio"):
             if transcribed_text.strip():
                 add_to_training(transcribed_text, t)
-                # Store the audio and transcription for future voice cloning (optional)
+                # store audio for future reference
                 audio_bytes = audio_file.read()
-                # We can save the audio file on disk with a timestamp
                 audio_filename = f"voice_{int(time.time())}.wav"
                 with open(audio_filename, "wb") as f:
                     f.write(audio_bytes)
@@ -594,13 +659,12 @@ def voice_training(t):
             else:
                 st.warning(t['warning_no_transcription'])
 
-# ---------- NEW FEATURE: TRANSLATION AND CORRECTION ----------
+# ---------- TRANSLATION AND CORRECTION ----------
 def translation_and_correction(t):
     st.markdown(f"## {t['translation_title']}")
     source_text = st.text_area(t['translation_source_text'], height=100)
     if st.button(t['translate_btn']):
         if source_text.strip():
-            # Use a free translation API (MyMemory)
             url = "https://api.mymemory.translated.net/get"
             params = {"q": source_text, "langpair": f"auto|ht"}
             try:
@@ -624,7 +688,7 @@ def translation_and_correction(t):
             else:
                 st.warning(t['warning_no_text'])
 
-# ---------- NEW FEATURE: ENCYCLOPEDIA ----------
+# ---------- ENCYCLOPEDIA MANAGER ----------
 def encyclopedia_manager(t):
     st.markdown(f"## {t['encyclopedia_title']}")
     with st.expander(t['encyclopedia_add']):
@@ -643,7 +707,6 @@ def encyclopedia_manager(t):
                 }
                 st.session_state.encyclopedia.append(entry)
                 save_encyclopedia()
-                # Also train the AI with this content
                 add_to_training(f"{title}: {content}", t)
                 st.success(f"Encyclopedia entry '{title}' added and trained!")
                 st.rerun()
@@ -668,7 +731,7 @@ def main_app():
     st.markdown(f"<h1 style='text-align:center;'>{t['app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['subtitle']}</p>", unsafe_allow_html=True)
 
-    # --- Chat Interface (existing) ---
+    # --- Chat Interface ---
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -684,7 +747,7 @@ def main_app():
             st.session_state.conversation_history.append({"role": "assistant", "content": response})
             st.rerun()
 
-    # --- Existing Training Sections (Text, Audio, Image, File) ---
+    # --- Existing Training Sections ---
     st.markdown("---")
     st.markdown(f"## {t['training_text_title']}")
     with st.expander(t["expand_text"]):
@@ -694,16 +757,7 @@ def main_app():
 
     st.markdown(f"## {t['audio_title']}")
     with st.expander(t["expand_audio"]):
-        audio_file = st.file_uploader(t["audio_upload_label"], type=["wav", "mp3", "m4a"])
-        if audio_file is not None:
-            st.audio(audio_file, format="audio/wav")
-            st.markdown(f"**{t['transcribe_label']}**")
-            transcribed_text = st.text_area(t["transcription_textarea"])
-            if st.button(t["train_transcription_button"], use_container_width=True):
-                if transcribed_text:
-                    add_to_training(transcribed_text, t)
-                else:
-                    st.warning(t['warning_no_transcription'])
+        voice_training(t)  # integrated recorder + uploader
 
     st.markdown(f"## {t['image_title']}")
     with st.expander(t["expand_image"]):
@@ -726,11 +780,9 @@ def main_app():
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
 
-    # --- NEW FEATURES: Dictionaries, Voice Training, Translation, Encyclopedia ---
+    # --- New Features ---
     st.markdown("---")
     dictionary_manager(t)
-    st.markdown("---")
-    voice_training(t)
     st.markdown("---")
     translation_and_correction(t)
     st.markdown("---")
