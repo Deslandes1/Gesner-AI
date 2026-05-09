@@ -429,7 +429,7 @@ if "language" not in st.session_state:
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 
-# ---------- ADD MISSING SESSION STATE INITIALIZATIONS ----------
+# ---------- DATA STORAGE INIT ----------
 if "dictionaries" not in st.session_state:
     st.session_state.dictionaries = {"ht": {}, "fr": {}, "en": {}}
 if "audio_transcriptions" not in st.session_state:
@@ -443,7 +443,6 @@ if not os.path.exists(VOICE_CACHE_DIR):
     os.makedirs(VOICE_CACHE_DIR)
 
 def get_voice_filename(text):
-    """Generate a filename from the exact text (normalized)."""
     norm = text.strip().lower()
     h = hashlib.md5(norm.encode()).hexdigest()
     return os.path.join(VOICE_CACHE_DIR, f"{h}.wav")
@@ -462,7 +461,6 @@ def get_voice_for_text(text):
     return None
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    """Return an HTML/JS button that plays the voice if available, else falls back to TTS."""
     voice_bytes = get_voice_for_text(text)
     if voice_bytes:
         audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -600,7 +598,7 @@ def show_sidebar():
     st.sidebar.markdown(f"### {t['pricing_title']}")
     st.sidebar.markdown(t['pricing_table'])
     
-    # Toggle Chat Mode
+    # Toggle between Training Mode and Gesner AI Chat Mode
     chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode)
     if chat_mode_toggle != st.session_state.chat_mode:
         st.session_state.chat_mode = chat_mode_toggle
@@ -804,7 +802,7 @@ def test_training(t):
             st.rerun()
         st.components.v1.html(play_voice_button(st.session_state.test_answer, t['test_speak_button'], "test"), height=50)
 
-# ---------- CHAT MODE (clean interface) ----------
+# ---------- GESNER AI CHAT MODE (public‑facing, no training) ----------
 def chat_mode_interface():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
@@ -855,7 +853,7 @@ def chat_mode_interface():
         st.session_state.chat_messages = []
         st.rerun()
 
-# ---------- TRAINING MODE (full original dashboard) ----------
+# ---------- TRAINING MODE (full dashboard, for administrators) ----------
 def training_mode():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
