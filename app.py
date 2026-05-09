@@ -842,34 +842,47 @@ def test_training(t):
             """
             st.components.v1.html(speak_button_html, height=50)
 
-# ---------- CHAT MODE INTERFACE ----------
+# ---------- CHAT MODE INTERFACE (fixed) ----------
 def chat_mode():
     t = TEXTS[st.session_state.language]
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>💬 {t['chat_mode_title']}</h1>", unsafe_allow_html=True)
     
-    # Chat input
-    user_question = st.text_input(t['chat_mode_question'], key="chat_question")
-    if st.button(t['send_button'], use_container_width=True, key="chat_send"):
+    # Initialize chat history list if not exists
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # Display chat history
+    for msg in st.session_state.chat_messages:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="chat-message assistant-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+    
+    # Input new question
+    user_question = st.text_input(t['chat_mode_question'], key="chat_question_input")
+    if st.button(t['send_button'], use_container_width=True, key="chat_send_btn"):
         if user_question.strip():
             answer = generate_response(user_question)
-            st.session_state.chat_answer = answer
-            st.session_state.chat_question = user_question
-            if "chat_voice_bytes" in st.session_state:
-                del st.session_state.chat_voice_bytes
+            st.session_state.chat_messages.append({"role": "user", "content": user_question})
+            st.session_state.chat_messages.append({"role": "assistant", "content": answer})
+            # Store the last answer for voice upload
+            st.session_state.last_chat_answer = answer
+            if "chat_voice_bytes_last" in st.session_state:
+                del st.session_state.chat_voice_bytes_last
             st.rerun()
     
-    if "chat_answer" in st.session_state:
-        st.markdown(f"**{t['test_answer_label']}**")
-        st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.chat_answer}</div>', unsafe_allow_html=True)
+    # Voice upload for the last answer
+    if "last_chat_answer" in st.session_state:
+        st.markdown(f"**{t['test_answer_label']}** (last answer)")
+        st.markdown(f'<div class="chat-message assistant-message" style="background:#0f3460;">{st.session_state.last_chat_answer}</div>', unsafe_allow_html=True)
         
-        # Voice upload for this specific answer
-        uploaded_voice = st.file_uploader(t['chat_upload_voice'], type=["wav", "mp3"], key="chat_voice_upload")
+        uploaded_voice = st.file_uploader(t['chat_upload_voice'], type=["wav", "mp3"], key="chat_voice_upload_last")
         if uploaded_voice is not None:
-            st.session_state.chat_voice_bytes = uploaded_voice.read()
+            st.session_state.chat_voice_bytes_last = uploaded_voice.read()
             st.success("Voice loaded. Click the button below to hear it.")
         
-        if st.session_state.get("chat_voice_bytes"):
-            audio_b64 = base64.b64encode(st.session_state.chat_voice_bytes).decode()
+        if st.session_state.get("chat_voice_bytes_last"):
+            audio_b64 = base64.b64encode(st.session_state.chat_voice_bytes_last).decode()
             mime_type = "audio/wav"
             if uploaded_voice and uploaded_voice.name.endswith('.mp3'):
                 mime_type = "audio/mpeg"
@@ -894,12 +907,12 @@ def chat_mode():
             """
             st.components.v1.html(play_button_html, height=60)
         else:
-            # Fallback: use same test button logic but without voice
+            # Fallback to speech synthesis
             speak_button_html = f"""
-            <button id="speakAnswerBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['chat_speak_button']}</button>
+            <button id="speakChatFallback" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white; font-weight:bold; cursor:pointer; margin-top:10px;">{t['chat_speak_button']}</button>
             <script>
-                document.getElementById('speakAnswerBtn').onclick = () => {{
-                    const text = {json.dumps(st.session_state.chat_answer)};
+                document.getElementById('speakChatFallback').onclick = () => {{
+                    const text = {json.dumps(st.session_state.last_chat_answer)};
                     const utterance = new SpeechSynthesisUtterance(text);
                     window.speechSynthesis.cancel();
                     window.speechSynthesis.speak(utterance);
@@ -908,24 +921,29 @@ def chat_mode():
             """
             st.components.v1.html(speak_button_html, height=50)
     
-    # Image upload and description
+    # Clear chat button
+    if st.button("Clear Chat", use_container_width=True, key="clear_chat_btn"):
+        st.session_state.chat_messages = []
+        if "last_chat_answer" in st.session_state:
+            del st.session_state.last_chat_answer
+        if "chat_voice_bytes_last" in st.session_state:
+            del st.session_state.chat_voice_bytes_last
+        st.rerun()
+    
+    # Image upload and description (same as before, but without conflicting keys)
     st.markdown("---")
     st.markdown(f"## {t['image_title']}")
     image_file = st.file_uploader(t['image_upload'], type=["jpg", "jpeg", "png"], key="chat_image")
     if image_file:
         image = Image.open(image_file)
         st.image(image, caption="Uploaded Image", width=300)
-        if st.button(t['image_describe_button'], use_container_width=True):
-            # Use a free image captioning API (or a local model). For simplicity, we'll use a placeholder.
-            # In a real implementation, you could call a service like HuggingFace's BLIP, but for demo we'll simulate.
-            # We'll use a simple captioning API if possible; but to avoid external dependencies, we'll use a generic response.
-            # The user can then upload voice for this description.
-            description = "This is a description of the image. (You can replace this with an actual image captioning model.)"
+        if st.button(t['image_describe_button'], use_container_width=True, key="describe_image_btn"):
+            # Use a free image captioning API or placeholder; here we provide a generic description
+            description = "This is a description of the image. (Replace with actual image captioning model if needed.)"
             st.session_state.image_description = description
             st.markdown(f"**{t['image_description_result']}** {description}")
-            # Option to train this description
-            if st.button("Train AI with this description", use_container_width=True):
-                add_to_training(description, t)
+            if st.button("Train AI with this description", use_container_width=True, key="train_desc"):
+                add_to_training(description, TEXTS[st.session_state.language])
                 st.success("Description added to AI knowledge.")
             # Voice upload for description
             desc_voice = st.file_uploader("Upload voice for this description (WAV/MP3)", type=["wav", "mp3"], key="desc_voice")
@@ -1035,7 +1053,7 @@ def main_app():
             st.rerun()
 
     else:
-        # Chat Mode (clean interface)
+        # Chat Mode
         chat_mode()
 
     st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
