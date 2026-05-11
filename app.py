@@ -620,7 +620,7 @@ def retrieve_facts_hybrid(query, k=3):
     if not semantic_results:
         semantic_results = []
     keyword_results = []
-    if st.session_state.tfidf_vectorizer and st.session_state.tfidf_matrix:
+    if st.session_state.tfidf_vectorizer is not None and st.session_state.tfidf_matrix is not None:
         q_vec = st.session_state.tfidf_vectorizer.transform([query])
         scores = cosine_similarity(q_vec, st.session_state.tfidf_matrix).flatten()
         top_indices = scores.argsort()[-k:][::-1]
