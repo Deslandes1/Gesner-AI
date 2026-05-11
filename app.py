@@ -123,6 +123,7 @@ st.markdown(
         cursor: pointer;
         font-size: 1rem;
         transition: 0.2s;
+        margin-right: 5px;
     }
     .char-btn:hover {
         background-color: #e94560;
@@ -548,7 +549,7 @@ TEXTS = {
     }
 }
 
-# ---------- SESSION STATE INITIALISATION ----------
+# ---------- SESSION STATE ----------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "training_data" not in st.session_state:
@@ -576,6 +577,12 @@ if "tfidf_vectorizer" not in st.session_state:
     st.session_state.tfidf_vectorizer = None
 if "tfidf_matrix" not in st.session_state:
     st.session_state.tfidf_matrix = None
+if "current_text_input" not in st.session_state:
+    st.session_state.current_text_input = ""
+if "current_text_area" not in st.session_state:
+    st.session_state.current_text_area = ""
+if "current_edit_area" not in st.session_state:
+    st.session_state.current_edit_area = {}
 
 # ---------- VOICE CACHE ----------
 VOICE_CACHE_DIR = "voice_cache"
@@ -600,7 +607,7 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-# ---------- HYBRID RETRIEVAL (FAISS + TF-IDF) ----------
+# ---------- HYBRID RETRIEVAL ----------
 def build_tfidf():
     if st.session_state.texts:
         st.session_state.tfidf_vectorizer = TfidfVectorizer(stop_words=None)
@@ -645,23 +652,10 @@ def french_web_search(query):
 
 def apply_phonics(text):
     rules = {
-        r'qu': 'k',
-        r'c([aeiou])': r'k\1',
-        r'ç': 's',
-        r'é': 'e',
-        r'è': 'e',
-        r'ê': 'e',
-        r'î': 'i',
-        r'ô': 'o',
-        r'û': 'u',
-        r'à': 'a',
-        r'ù': 'u',
-        r'œ': 'oe',
-        r'æ': 'ae',
-        r'ph': 'f',
-        r'th': 't',
-        r'([^aeiouy])y([aeiou])': r'\1i\2',
-        r'-tion$': 'syon',
+        r'qu': 'k', r'c([aeiou])': r'k\1', r'ç': 's',
+        r'é': 'e', r'è': 'e', r'ê': 'e', r'î': 'i', r'ô': 'o', r'û': 'u',
+        r'à': 'a', r'ù': 'u', r'œ': 'oe', r'æ': 'ae', r'ph': 'f',
+        r'th': 't', r'([^aeiouy])y([aeiou])': r'\1i\2', r'-tion$': 'syon',
     }
     corrected = text.lower()
     for pattern, repl in rules.items():
@@ -836,40 +830,37 @@ if intro_text_ht not in [item["text"] for item in st.session_state.training_data
     with open("training_data.json", "w") as f:
         json.dump(st.session_state.training_data, f, indent=2)
 
-# ---------- HAITIAN CREOLE CHARACTER PICKER ----------
-def character_picker(target_key, label="Insert Kreyòl characters:"):
+# ---------- HAITIAN CREOLE CHARACTER PICKER (only in training mode, with append logic) ----------
+def character_picker(key_prefix, label="Insert Kreyòl characters:"):
     chars = [
-        "e", "è", "E", "È",
-        "o", "ò", "O", "Ò",
-        "an", "An", "AN", "en", "En", "EN",
-        "on", "On", "ON", "oun", "Oun", "OUN"
+        "e", "è", "E", "È", "o", "ò", "O", "Ò",
+        "an", "An", "AN", "en", "En", "EN", "on", "On", "ON", "oun", "Oun", "OUN"
     ]
-    js = """
-    <script>
-    function insertTextAtCursor(text) {
-        var activeEl = document.activeElement;
-        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-            var start = activeEl.selectionStart;
-            var end = activeEl.selectionEnd;
-            var value = activeEl.value;
-            activeEl.value = value.substring(0, start) + text + value.substring(end);
-            activeEl.selectionStart = activeEl.selectionEnd = start + text.length;
-            var event = new Event('input', { bubbles: true });
-            activeEl.dispatchEvent(event);
-        } else {
-            alert('Click inside a text field first, then click a character button.');
-        }
-    }
-    window.insertTextAtCursor = insertTextAtCursor;
-    </script>
-    """
-    st.markdown(js, unsafe_allow_html=True)
     st.markdown(f"**{label}**")
-    buttons_html = '<div class="char-picker">'
-    for ch in chars:
-        buttons_html += f'<button class="char-btn" onclick="insertTextAtCursor(\'{ch}\')">{ch}</button>'
-    buttons_html += '</div>'
-    st.markdown(buttons_html, unsafe_allow_html=True)
+    cols = st.columns(len(chars))
+    for i, ch in enumerate(chars):
+        with cols[i]:
+            if st.button(ch, key=f"char_{key_prefix}_{ch}"):
+                # Append to the appropriate session state variable
+                if key_prefix == "train_text":
+                    current = st.session_state.get("train_text", "")
+                    st.session_state.train_text = current + ch
+                    st.rerun()
+                elif key_prefix == "train_chat_input":
+                    current = st.session_state.get("train_chat_input", "")
+                    st.session_state.train_chat_input = current + ch
+                    st.rerun()
+                elif key_prefix == "img_desc":
+                    current = st.session_state.get("img_desc", "")
+                    st.session_state.img_desc = current + ch
+                    st.rerun()
+                elif key_prefix.startswith("edit_"):
+                    # For edit facts
+                    idx = key_prefix.split("_")[1]
+                    key = f"edit_text_{idx}"
+                    current = st.session_state.get(key, "")
+                    st.session_state[key] = current + ch
+                    st.rerun()
 
 # ---------- LOGIN PAGE ----------
 def login_page():
@@ -1156,7 +1147,7 @@ def chat_mode_interface():
                 )
                 if btn_html:
                     st.components.v1.html(btn_html, height=50)
-    character_picker("chat_input", "Insert Kreyòl characters (click inside the text box first):")
+    # No character picker in chat mode
     user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
     if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
         if user_input.strip():
@@ -1207,6 +1198,7 @@ def training_mode():
     st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
 
+    # Sanitize conversation history
     clean_history = []
     for msg in st.session_state.conversation_history:
         if isinstance(msg, dict) and "role" in msg and "content" in msg:
@@ -1220,7 +1212,8 @@ def training_mode():
         else:
             st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
 
-    character_picker("train_chat_input")
+    # Character picker for training chat input
+    character_picker("train_chat_input", "Insert Kreyòl characters (click a button, then click inside the text box):")
     user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
     if st.button(t["send_button"], use_container_width=True):
         if user_input.strip():
@@ -1233,7 +1226,7 @@ def training_mode():
     st.markdown("---")
     st.markdown(f"## {t['training_text_title']}")
     with st.expander(t["expand_text"]):
-        character_picker("train_text")
+        character_picker("train_text", "Insert Kreyòl characters for the fact:")
         text = st.text_area(t["text_area_label"], key="train_text")
         if st.button(t["train_text_button"], use_container_width=True):
             add_to_training(text, t)
@@ -1245,7 +1238,7 @@ def training_mode():
     st.markdown(f"## {t['image_title']}")
     with st.expander(t["expand_image"]):
         img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
-        character_picker("img_desc")
+        character_picker("img_desc", "Insert Kreyòl characters for the description:")
         desc = st.text_area(t["image_description_label"], key="img_desc")
         if img_file:
             st.image(img_file, caption=t['image_caption'], width=200)
@@ -1276,6 +1269,7 @@ def training_mode():
     phonics_training(t)
     st.markdown("---")
 
+    # Manage Trained Facts
     st.markdown(f"## {t.get('manage_facts', '📚 Manage Trained Facts')}")
     if not st.session_state.training_data:
         st.info("No facts trained yet. Use the training tools above.")
@@ -1283,7 +1277,9 @@ def training_mode():
         for idx, item in enumerate(st.session_state.training_data):
             original = item["text"]
             with st.expander(f"Fact #{idx+1}: {original[:60]}..."):
-                new_text = st.text_area(f"Edit text", value=original, key=f"edit_{idx}")
+                # Character picker for edit text area
+                character_picker(f"edit_{idx}", "Insert Kreyòl characters:")
+                new_text = st.text_area(f"Edit text", value=original, key=f"edit_text_{idx}")
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("✏️ Save", key=f"save_{idx}"):
