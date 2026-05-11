@@ -389,7 +389,7 @@ TEXTS = {
 | **Antrepriz / Kòd sous** | $999 |
 """,
         "logout_button": "🔓 Dekonekte",
-        "no_facts_answer": "Mwen poko konnen sa. Tanpri anseye m nan Mòd Fòmasyon!",
+        "no_facts_answer": "Mwen poko konnen sa. Anseye m nan Sant Fòmasyon.",
         "with_facts_answer": "{context}",
         "training_success": "✅ Antrene : {text}...",
         "warning_no_text": "Tanpri antre kèk tèks.",
@@ -616,7 +616,7 @@ def build_tfidf():
         st.session_state.tfidf_matrix = st.session_state.tfidf_vectorizer.fit_transform(st.session_state.texts)
 
 def retrieve_facts_hybrid(query, k=3):
-    semantic_results = retrieve_relevant_facts(query, k=k, threshold=1.0)
+    semantic_results = retrieve_relevant_facts(query, k=k, threshold=1.2)  # LOWERED THRESHOLD
     if not semantic_results:
         semantic_results = []
     keyword_results = []
@@ -630,7 +630,7 @@ def retrieve_facts_hybrid(query, k=3):
     combined = list(dict.fromkeys(semantic_results + keyword_results))
     return combined[:k]
 
-def retrieve_relevant_facts(query, k=3, threshold=0.8):
+def retrieve_relevant_facts(query, k=3, threshold=1.2):
     if st.session_state.index is None or st.session_state.index.ntotal == 0:
         return []
     query_embedding = st.session_state.embedding_model.encode([query])[0].astype(np.float32).reshape(1, -1)
@@ -677,14 +677,35 @@ def apply_phonics(text):
         corrected = re.sub(pattern, repl, corrected, flags=re.IGNORECASE)
     return corrected[0].upper() + corrected[1:] if corrected else ""
 
+# ---------- DIRECT KEYWORD MAPPING FOR COMMON QUESTIONS ----------
+def direct_keyword_answer(query):
+    q_lower = query.lower().strip()
+    keywords = {
+        "konbyen let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
+        "32 let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
+        "alfabet kreyol": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
+        "kisa alfabè a ye": "Alfabè kreyòl la gen 32 let ki reprezante tout son lang lan.",
+        "kouman pou ekri alfabet la": "Alfabè kreyòl la se: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
+    }
+    for key, answer in keywords.items():
+        if key in q_lower:
+            return answer
+    return None
+
 def generate_answer_from_training(query, target_lang):
+    # First, try direct keyword mapping (for common questions)
+    direct_answer = direct_keyword_answer(query)
+    if direct_answer and target_lang == "ht":
+        return direct_answer, False, None
+    
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
     if target_lang == "ht":
+        # Fallback: try to apply phonics and ask to teach
         corrected = apply_phonics(query)
         if corrected != query:
-            return f"Mw te aprann ou ta dwe ekri: '{corrected}'. M ap kontinye aprann.", True, "ht"
+            return f"Mw te aprann ou ta dwe ekri: '{corrected}'. M ap kontinye aprann. Tanpri anseye m repons lan nan Sant Fòmasyon si se pa bon.", True, "ht"
         else:
             return "Mwen poko genyen repons lan. Tanpri moutre mwen lè w anseye m nan Sant Fòmasyon.", True, "ht"
     else:
@@ -881,7 +902,7 @@ def show_sidebar():
         st.session_state.authenticated = False
         st.rerun()
 
-# ---------- DICTIONARY MANAGER ----------
+# ---------- DICTIONARY MANAGER (unchanged, keep as before) ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
