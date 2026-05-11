@@ -10,6 +10,8 @@ import base64
 import time
 import hashlib
 import re
+import csv
+import io
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from duckduckgo_search import DDGS
@@ -244,7 +246,12 @@ TEXTS = {
         "phonics_add": "Teach example",
         "manage_facts": "📚 Manage Trained Facts",
         "train_entry_button": "Train AI with this entry",
-        "trained_entry_success": "✅ Trained: {word} → {meaning}"
+        "trained_entry_success": "✅ Trained: {word} → {meaning}",
+        "bulk_training_title": "🚀 Bulk Training (Fast Import)",
+        "bulk_csv_label": "Upload CSV file (columns: question, answer OR one column 'fact')",
+        "bulk_json_label": "Upload JSON file (array of strings)",
+        "bulk_text_label": "Paste text (one fact per line)",
+        "bulk_import_button": "Import All Facts"
     },
     "fr": {
         "training_app_title": "🧠 Gesner IA – Centre d'entraînement",
@@ -347,7 +354,12 @@ TEXTS = {
         "phonics_add": "Enseigner l'exemple",
         "manage_facts": "📚 Gérer les faits appris",
         "train_entry_button": "Entraîner l'IA avec cette entrée",
-        "trained_entry_success": "✅ Entraîné : {word} → {meaning}"
+        "trained_entry_success": "✅ Entraîné : {word} → {meaning}",
+        "bulk_training_title": "🚀 Entraînement groupé (import rapide)",
+        "bulk_csv_label": "Télécharger fichier CSV (colonnes: question, réponse OU une colonne 'fact')",
+        "bulk_json_label": "Télécharger fichier JSON (tableau de chaînes)",
+        "bulk_text_label": "Coller du texte (une ligne = un fait)",
+        "bulk_import_button": "Importer tous les faits"
     },
     "ht": {
         "training_app_title": "🧠 Gesner AI – Sant Fòmasyon",
@@ -450,7 +462,12 @@ TEXTS = {
         "phonics_add": "Ansègne egzanp",
         "manage_facts": "📚 Jere Reyalite Aprann",
         "train_entry_button": "Antrene AI ak antre sa a",
-        "trained_entry_success": "✅ Antrene : {word} → {meaning}"
+        "trained_entry_success": "✅ Antrene : {word} → {meaning}",
+        "bulk_training_title": "🚀 Antreman an mas (enpòtasyon rapid)",
+        "bulk_csv_label": "Chaje fichye CSV (kolòn: kesyon, repons OSWA yon sèl kolòn 'fact')",
+        "bulk_json_label": "Chaje fichye JSON (tablo chèn karaktè)",
+        "bulk_text_label": "Kole tèks (yon liy = yon reyalite)",
+        "bulk_import_button": "Enpòte tout reyalite yo"
     },
     "es": {
         "training_app_title": "🧠 Gesner AI – Centro de Entrenamiento",
@@ -553,7 +570,12 @@ TEXTS = {
         "phonics_add": "Enseñar ejemplo",
         "manage_facts": "📚 Gestionar hechos aprendidos",
         "train_entry_button": "Entrenar IA con esta entrada",
-        "trained_entry_success": "✅ Entrenado: {word} → {meaning}"
+        "trained_entry_success": "✅ Entrenado: {word} → {meaning}",
+        "bulk_training_title": "🚀 Entrenamiento masivo (importación rápida)",
+        "bulk_csv_label": "Subir archivo CSV (columnas: pregunta, respuesta O una columna 'fact')",
+        "bulk_json_label": "Subir archivo JSON (arreglo de cadenas)",
+        "bulk_text_label": "Pegar texto (una línea = un hecho)",
+        "bulk_import_button": "Importar todos los hechos"
     }
 }
 
@@ -755,6 +777,9 @@ def add_to_training(text, t):
     if not text.strip():
         st.warning(t['warning_no_text'])
         return False
+    # Avoid duplicate exact same text (optional)
+    # if text in st.session_state.texts:
+    #     return False
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     if st.session_state.index is None:
@@ -1181,6 +1206,76 @@ def phonics_training(t):
     else:
         st.info("No phonics examples taught yet.")
 
+# ---------- BULK TRAINING (NEW) ----------
+def bulk_training(t):
+    st.markdown(f"## {t['bulk_training_title']}")
+    st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
+    
+    # Option 1: CSV file
+    csv_file = st.file_uploader(t['bulk_csv_label'], type=["csv"], key="bulk_csv")
+    if csv_file:
+        try:
+            content = csv_file.read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(content))
+            facts = []
+            for row in reader:
+                if 'question' in row and 'answer' in row:
+                    facts.append(f"{row['question']} → {row['answer']}")
+                elif 'fact' in row:
+                    facts.append(row['fact'])
+                else:
+                    # assume first column is the fact
+                    first_key = list(row.keys())[0]
+                    facts.append(row[first_key])
+            if facts:
+                st.info(f"Found {len(facts)} facts in CSV. Click import to add them.")
+                if st.button(t['bulk_import_button'], key="import_csv"):
+                    count = 0
+                    for fact in facts:
+                        if fact.strip():
+                            if add_to_training(fact.strip(), t):
+                                count += 1
+                    st.success(f"Imported {count} facts.")
+                    st.rerun()
+            else:
+                st.warning("No valid facts found in CSV.")
+        except Exception as e:
+            st.error(f"Error reading CSV: {e}")
+    
+    # Option 2: JSON file (array of strings)
+    json_file = st.file_uploader(t['bulk_json_label'], type=["json"], key="bulk_json")
+    if json_file:
+        try:
+            data = json.load(json_file)
+            if isinstance(data, list):
+                facts = [str(item) for item in data]
+                st.info(f"Found {len(facts)} facts in JSON. Click import to add them.")
+                if st.button(t['bulk_import_button'], key="import_json"):
+                    count = 0
+                    for fact in facts:
+                        if fact.strip():
+                            if add_to_training(fact.strip(), t):
+                                count += 1
+                    st.success(f"Imported {count} facts.")
+                    st.rerun()
+            else:
+                st.warning("JSON must be an array of strings.")
+        except Exception as e:
+            st.error(f"Error reading JSON: {e}")
+    
+    # Option 3: Plain text (one fact per line)
+    text_facts = st.text_area(t['bulk_text_label'], height=200, key="bulk_text")
+    if text_facts.strip():
+        lines = [line.strip() for line in text_facts.split('\n') if line.strip()]
+        st.info(f"Found {len(lines)} facts in text. Click import to add them.")
+        if st.button(t['bulk_import_button'], key="import_text"):
+            count = 0
+            for fact in lines:
+                if add_to_training(fact, t):
+                    count += 1
+            st.success(f"Imported {count} facts.")
+            st.rerun()
+
 def training_mode():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS[ui_lang]
@@ -1244,6 +1339,10 @@ def training_mode():
             st.text_area(t['file_preview'], content, height=150)
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
+    
+    # NEW: Bulk Training section
+    st.markdown("---")
+    bulk_training(t)
 
     st.markdown("---")
     dictionary_manager(t)
