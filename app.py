@@ -20,7 +20,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- ORIGINAL CSS (dark theme, same as before) ----------
+# ---------- UPDATED CSS (no white background, dark theme everywhere) ----------
 st.markdown(
     """
     <style>
@@ -50,9 +50,29 @@ st.markdown(
         background-color: #ff6b6b !important;
         transform: scale(1.02);
     }
-    .stTextInput input, .stTextArea textarea {
+    /* Dark backgrounds for inputs and selects */
+    .stTextInput input, .stTextArea textarea,
+    .stSelectbox select, .stSelectbox div[data-baseweb="select"] > div,
+    .stSelectbox div[data-baseweb="select"] input,
+    .stNumberInput input, .stDateInput input {
         background-color: #0f3460 !important;
         color: white !important;
+        border-radius: 12px;
+        border: 1px solid #e94560;
+    }
+    .stSelectbox svg {
+        fill: white !important;
+    }
+    /* Code blocks (for the 32 letters) */
+    .stCodeBlock, .stCodeBlock div, pre, code {
+        background-color: #0f3460 !important;
+        color: #ffffff !important;
+        border-radius: 12px;
+        padding: 0.5rem;
+    }
+    /* Expander headers */
+    .stExpanderHeader {
+        background-color: rgba(15,52,96,0.9) !important;
         border-radius: 12px;
     }
     .chat-message {
@@ -90,9 +110,6 @@ st.markdown(
         margin-top: 2rem;
         padding: 1rem;
         border-top: 1px solid #e94560;
-    }
-    .stExpanderHeader {
-        background-color: rgba(15,52,96,0.8) !important;
     }
     </style>
     """,
