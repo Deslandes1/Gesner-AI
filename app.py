@@ -706,34 +706,28 @@ def direct_keyword_answer(query):
             return answer
     return None
 
+# ---------- MODIFIED FALLBACK: ALWAYS FRENCH TEXT AND FRENCH TTS ----------
 def generate_answer_from_training(query, target_lang):
+    # 1) Direct keyword answers (only for Haitian Creole alphabet)
     direct_answer = direct_keyword_answer(query)
     if direct_answer and target_lang == "ht":
         return direct_answer, False, None
+    # 2) Retrieve from trained facts (semantic + keyword)
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
-    if target_lang == "ht":
-        corrected = apply_phonics(query)
-        if corrected != query:
-            return f"Mw te aprann ou ta dwe ekri: '{corrected}'. M ap kontinye aprann. Tanpri anseye m repons lan nan Sant Fòmasyon si se pa bon.", True, "ht"
-        else:
-            return "Mwen poko genyen repons lan. Tanpri moutre mwen lè w anseye m nan Sant Fòmasyon.", True, "ht"
-    else:
-        fallback_map = {
-            "en": "I haven't learned that yet. Please teach me in the Training Center.",
-            "fr": "Je n'ai pas encore appris cela. Enseignez‑moi dans le Centre d'entraînement.",
-            "es": "Todavía no he aprendido eso. Enséñame en el Centro de Entrenamiento."
-        }
-        return fallback_map.get(target_lang, "I don't know that yet. Please teach me."), True, target_lang
+    # 3) Fallback: always return French text + French TTS
+    french_fallback = "Je n'ai pas encore appris cela. Veuillez m'enseigner dans le Centre d'entraînement."
+    return french_fallback, True, "fr"
 
 def generate_response(user_input, target_lang):
     return generate_answer_from_training(user_input, target_lang)
 
 def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
     if is_fallback:
-        lang_map = {"en": "en-US", "fr": "fr-FR", "es": "es-ES", "ht": "fr-FR"}
-        tts_lang = lang_map.get(fallback_audio_lang, "en-US")
+        # fallback_audio_lang is "fr" from our modified function
+        lang_map = {"fr": "fr-FR"}
+        tts_lang = lang_map.get(fallback_audio_lang, "fr-FR")
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
@@ -773,13 +767,11 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
         else:
             return ""
 
+# ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text, t):
     if not text.strip():
         st.warning(t['warning_no_text'])
         return False
-    # Avoid duplicate exact same text (optional)
-    # if text in st.session_state.texts:
-    #     return False
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     if st.session_state.index is None:
@@ -1206,12 +1198,12 @@ def phonics_training(t):
     else:
         st.info("No phonics examples taught yet.")
 
-# ---------- BULK TRAINING (NEW) ----------
+# ---------- BULK TRAINING ----------
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
     st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
     
-    # Option 1: CSV file
+    # CSV file
     csv_file = st.file_uploader(t['bulk_csv_label'], type=["csv"], key="bulk_csv")
     if csv_file:
         try:
@@ -1224,7 +1216,6 @@ def bulk_training(t):
                 elif 'fact' in row:
                     facts.append(row['fact'])
                 else:
-                    # assume first column is the fact
                     first_key = list(row.keys())[0]
                     facts.append(row[first_key])
             if facts:
@@ -1242,7 +1233,7 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading CSV: {e}")
     
-    # Option 2: JSON file (array of strings)
+    # JSON file
     json_file = st.file_uploader(t['bulk_json_label'], type=["json"], key="bulk_json")
     if json_file:
         try:
@@ -1263,7 +1254,7 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading JSON: {e}")
     
-    # Option 3: Plain text (one fact per line)
+    # Plain text
     text_facts = st.text_area(t['bulk_text_label'], height=200, key="bulk_text")
     if text_facts.strip():
         lines = [line.strip() for line in text_facts.split('\n') if line.strip()]
@@ -1340,7 +1331,7 @@ def training_mode():
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
     
-    # NEW: Bulk Training section
+    # Bulk Training section
     st.markdown("---")
     bulk_training(t)
 
