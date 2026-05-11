@@ -242,7 +242,9 @@ TEXTS = {
         "phonics_title": "🔊 Phonics Training (32 Letters)",
         "phonics_example": "Example word/sentence for letter {letter}",
         "phonics_add": "Teach example",
-        "manage_facts": "📚 Manage Trained Facts"
+        "manage_facts": "📚 Manage Trained Facts",
+        "train_entry_button": "Train AI with this entry",
+        "trained_entry_success": "✅ Trained: {word} → {meaning}"
     },
     "fr": {
         "training_app_title": "🧠 Gesner IA – Centre d'entraînement",
@@ -343,7 +345,9 @@ TEXTS = {
         "phonics_title": "🔊 Entraînement phonétique (32 lettres)",
         "phonics_example": "Exemple de mot/phrase pour la lettre {letter}",
         "phonics_add": "Enseigner l'exemple",
-        "manage_facts": "📚 Gérer les faits appris"
+        "manage_facts": "📚 Gérer les faits appris",
+        "train_entry_button": "Entraîner l'IA avec cette entrée",
+        "trained_entry_success": "✅ Entraîné : {word} → {meaning}"
     },
     "ht": {
         "training_app_title": "🧠 Gesner AI – Sant Fòmasyon",
@@ -444,7 +448,9 @@ TEXTS = {
         "phonics_title": "🔊 Fòmasyon Fònètik (32 Let)",
         "phonics_example": "Egzanp mo/fraz pou let {letter}",
         "phonics_add": "Ansègne egzanp",
-        "manage_facts": "📚 Jere Reyalite Aprann"
+        "manage_facts": "📚 Jere Reyalite Aprann",
+        "train_entry_button": "Antrene AI ak antre sa a",
+        "trained_entry_success": "✅ Antrene : {word} → {meaning}"
     },
     "es": {
         "training_app_title": "🧠 Gesner AI – Centro de Entrenamiento",
@@ -545,7 +551,9 @@ TEXTS = {
         "phonics_title": "🔊 Entrenamiento Fonético (32 letras)",
         "phonics_example": "Ejemplo de palabra/frase para la letra {letter}",
         "phonics_add": "Enseñar ejemplo",
-        "manage_facts": "📚 Gestionar hechos aprendidos"
+        "manage_facts": "📚 Gestionar hechos aprendidos",
+        "train_entry_button": "Entrenar IA con esta entrada",
+        "trained_entry_success": "✅ Entrenado: {word} → {meaning}"
     }
 }
 
@@ -916,58 +924,46 @@ def show_sidebar():
         st.session_state.authenticated = False
         st.rerun()
 
-# ---------- DICTIONARY MANAGER ----------
+# ---------- DICTIONARY MANAGER (ENHANCED) ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
+    
+    # Helper to display a dictionary column with training button
+    def display_dict(lang_code, lang_label, dict_data):
+        st.markdown(f"### {lang_label}")
+        w = st.text_input(f"{t['dict_word']} ({lang_code.upper()})", key=f"{lang_code}_word")
+        m = st.text_input(f"{t['dict_meaning']} ({lang_code.upper()})", key=f"{lang_code}_meaning")
+        if st.button(t['dict_add'], key=f"add_{lang_code}"):
+            if w and m:
+                dict_data[w] = m
+                save_dictionaries()
+                st.success(f"Added {w}")
+                st.rerun()
+        # List entries
+        for word, meaning in list(dict_data.items()):
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.text(f"{word}: {meaning}")
+            with col_b:
+                # Train AI button
+                if st.button(t['train_entry_button'], key=f"train_{lang_code}_{word}"):
+                    train_text = f"{word} means {meaning}"
+                    if add_to_training(train_text, t):
+                        st.success(t['trained_entry_success'].format(word=word, meaning=meaning))
+                        st.rerun()
+                # Delete button
+                if st.button(f"{t['dict_delete']}", key=f"del_{lang_code}_{word}"):
+                    del dict_data[word]
+                    save_dictionaries()
+                    st.rerun()
+    
     with col1:
-        st.markdown(f"### {t['dict_ht']}")
-        w = st.text_input(f"{t['dict_word']} (HT)", key="ht_word")
-        m = st.text_input(f"{t['dict_meaning']} (HT)", key="ht_meaning")
-        if st.button(t['dict_add'], key="add_ht"):
-            if w and m:
-                st.session_state.dictionaries["ht"][w] = m
-                save_dictionaries()
-                st.success(f"Added {w}")
-                st.rerun()
-        for word, meaning in list(st.session_state.dictionaries["ht"].items()):
-            st.text(f"{word}: {meaning}")
-            if st.button(f"{t['dict_delete']} {word}", key=f"del_ht_{word}"):
-                del st.session_state.dictionaries["ht"][word]
-                save_dictionaries()
-                st.rerun()
+        display_dict("ht", t['dict_ht'], st.session_state.dictionaries["ht"])
     with col2:
-        st.markdown(f"### {t['dict_fr']}")
-        w = st.text_input(f"{t['dict_word']} (FR)", key="fr_word")
-        m = st.text_input(f"{t['dict_meaning']} (FR)", key="fr_meaning")
-        if st.button(t['dict_add'], key="add_fr"):
-            if w and m:
-                st.session_state.dictionaries["fr"][w] = m
-                save_dictionaries()
-                st.success(f"Added {w}")
-                st.rerun()
-        for word, meaning in list(st.session_state.dictionaries["fr"].items()):
-            st.text(f"{word}: {meaning}")
-            if st.button(f"{t['dict_delete']} {word}", key=f"del_fr_{word}"):
-                del st.session_state.dictionaries["fr"][word]
-                save_dictionaries()
-                st.rerun()
+        display_dict("fr", t['dict_fr'], st.session_state.dictionaries["fr"])
     with col3:
-        st.markdown(f"### {t['dict_en']}")
-        w = st.text_input(f"{t['dict_word']} (EN)", key="en_word")
-        m = st.text_input(f"{t['dict_meaning']} (EN)", key="en_meaning")
-        if st.button(t['dict_add'], key="add_en"):
-            if w and m:
-                st.session_state.dictionaries["en"][w] = m
-                save_dictionaries()
-                st.success(f"Added {w}")
-                st.rerun()
-        for word, meaning in list(st.session_state.dictionaries["en"].items()):
-            st.text(f"{word}: {meaning}")
-            if st.button(f"{t['dict_delete']} {word}", key=f"del_en_{word}"):
-                del st.session_state.dictionaries["en"][word]
-                save_dictionaries()
-                st.rerun()
+        display_dict("en", t['dict_en'], st.session_state.dictionaries["en"])
 
 def save_dictionaries():
     with open("dictionaries.json", "w") as f:
