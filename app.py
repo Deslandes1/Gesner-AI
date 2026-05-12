@@ -1,28 +1,22 @@
+# ===== FAST STARTUP OPTIMIZATIONS =====
 import os
 os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import streamlit as st
 import json
 import numpy as np
-from sentence_transformers import SentenceTransformer
-import faiss
-from PIL import Image
-import requests
-import base64
 import time
 import hashlib
 import re
 import csv
 import io
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from duckduckgo_search import DDGS
+from PIL import Image
+import requests
+import base64
 
-st.set_page_config(
-    page_title="Gesner AI",
-    page_icon="🧠",
-    layout="wide"
-)
+st.set_page_config(page_title="Gesner AI", page_icon="🧠", layout="wide")
 
 # ---------- CSS (dark theme) ----------
 st.markdown(
@@ -588,16 +582,14 @@ TEXTS = {
     }
 }
 
-# ---------- SESSION STATE ----------
+# ---------- SESSION STATE INITIALIZATION ----------
 if "training_data" not in st.session_state:
     st.session_state.training_data = []
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
-if "embedding_model" not in st.session_state:
-    with st.spinner("Loading AI model... (first time only)"):
-        st.session_state.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-    st.session_state.index = None
-    st.session_state.texts = []
+# embedding_model is now cached via @st.cache_resource – not stored in session_state
+st.session_state.index = None
+st.session_state.texts = []
 if "chat_mode" not in st.session_state:
     st.session_state.chat_mode = False
 if "dictionaries" not in st.session_state:
@@ -645,9 +637,22 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-# ---------- HYBRID RETRIEVAL ----------
+# ---------- CACHED MODEL LOADER ----------
+@st.cache_resource
+def load_embedding_model():
+    """Load SentenceTransformer model once and cache globally."""
+    from sentence_transformers import SentenceTransformer
+    with st.spinner("🤖 Loading AI model (first time only) – please wait..."):
+        # all-MiniLM-L6-v2 is ~80MB; you can switch to all-MiniLM-L3-v2 (21MB) for faster cold starts
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+    return model
+
+# ---------- HELPER FUNCTIONS (lazy imports) ----------
+
 def build_tfidf():
+    """Build TF-IDF index from current texts."""
     if st.session_state.texts:
+        from sklearn.feature_extraction.text import TfidfVectorizer
         st.session_state.tfidf_vectorizer = TfidfVectorizer(stop_words=None)
         st.session_state.tfidf_matrix = st.session_state.tfidf_vectorizer.fit_transform(st.session_state.texts)
 
@@ -657,6 +662,7 @@ def retrieve_facts_hybrid(query, k=3):
         semantic_results = []
     keyword_results = []
     if st.session_state.tfidf_vectorizer is not None and st.session_state.tfidf_matrix is not None:
+        from sklearn.metrics.pairwise import cosine_similarity
         q_vec = st.session_state.tfidf_vectorizer.transform([query])
         scores = cosine_similarity(q_vec, st.session_state.tfidf_matrix).flatten()
         top_indices = scores.argsort()[-k:][::-1]
@@ -669,7 +675,9 @@ def retrieve_facts_hybrid(query, k=3):
 def retrieve_relevant_facts(query, k=3, threshold=1.2):
     if st.session_state.index is None or st.session_state.index.ntotal == 0:
         return []
-    query_embedding = st.session_state.embedding_model.encode([query])[0].astype(np.float32).reshape(1, -1)
+    import faiss
+    model = load_embedding_model()
+    query_embedding = model.encode([query])[0].astype(np.float32).reshape(1, -1)
     distances, indices = st.session_state.index.search(query_embedding, k)
     results = []
     for i, idx in enumerate(indices[0]):
@@ -808,7 +816,7 @@ def reason_about_question(query, lang):
     
     return None
 
-# ---------- INTELLIGENT RESPONSE WITH THINKING ----------
+# ---------- INTELLIGENT RESPONSE ----------
 def generate_answer_from_training(query, target_lang):
     # Phase 1: direct keywords
     direct = direct_keyword_answer(query)
@@ -917,9 +925,11 @@ def add_to_training(text, t):
     if not text.strip():
         st.warning(t['warning_no_text'])
         return False
-    embedding = st.session_state.embedding_model.encode([text])[0]
+    model = load_embedding_model()
+    embedding = model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     if st.session_state.index is None:
+        import faiss
         dim = len(embedding)
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.texts = []
@@ -935,11 +945,13 @@ def update_training_item(idx, new_text, t):
     if not new_text.strip():
         st.warning(t['warning_no_text'])
         return False
-    embedding = st.session_state.embedding_model.encode([new_text])[0]
+    model = load_embedding_model()
+    embedding = model.encode([new_text])[0]
     st.session_state.training_data[idx] = {"text": new_text, "embedding": embedding.tolist()}
     st.session_state.texts = [item["text"] for item in st.session_state.training_data]
     if st.session_state.texts:
         embeddings = [np.array(item["embedding"], dtype=np.float32) for item in st.session_state.training_data]
+        import faiss
         dim = len(embeddings[0])
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.index.add(np.array(embeddings))
@@ -958,6 +970,7 @@ def delete_training_item(idx):
     st.session_state.texts = [item["text"] for item in st.session_state.training_data]
     if st.session_state.texts:
         embeddings = [np.array(item["embedding"], dtype=np.float32) for item in st.session_state.training_data]
+        import faiss
         dim = len(embeddings[0])
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.index.add(np.array(embeddings))
@@ -980,6 +993,7 @@ def load_previous_training():
                 if data:
                     st.session_state.texts = [item["text"] for item in data]
                     embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
+                    import faiss
                     dim = len(embeddings[0])
                     st.session_state.index = faiss.IndexFlatL2(dim)
                     st.session_state.index.add(np.array(embeddings))
@@ -990,9 +1004,11 @@ def load_previous_training():
 def ensure_intro_text():
     intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
     if intro_text_ht not in [item["text"] for item in st.session_state.training_data]:
-        embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
+        model = load_embedding_model()
+        embedding = model.encode([intro_text_ht])[0]
         st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
         st.session_state.texts = [intro_text_ht]
+        import faiss
         dim = len(embedding)
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.index.add(np.array([embedding], dtype=np.float32))
@@ -1124,7 +1140,7 @@ def voice_training(t):
         }};
     </script>
     """
-    st.components.v1.html(recorder_html, height=200)
+    st.html(recorder_html)  # replaced st.components.v1.html with st.html
     st.markdown(f"### 📂 {t['voice_upload']}")
     uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload")
     transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript")
@@ -1216,7 +1232,7 @@ def test_training(t):
             "test"
         )
         if btn_html:
-            st.components.v1.html(btn_html, height=50)
+            st.html(btn_html)  # replaced st.components.v1.html with st.html
         elif not st.session_state.test_is_fallback:
             st.info("No voice recorded for this answer. You can upload your voice above.")
 
@@ -1443,7 +1459,7 @@ def public_chat_interface():
                     f"public_{idx}"
                 )
                 if btn_html:
-                    st.components.v1.html(btn_html, height=50)
+                    st.html(btn_html)  # replaced st.components.v1.html with st.html
     
     # Free text input
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
