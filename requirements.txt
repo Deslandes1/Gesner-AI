@@ -2,7 +2,8 @@ streamlit
 sentence-transformers
 faiss-cpu
 numpy
-pillow
+Pillow
 requests
 scikit-learn
-duckduckgo_search
+duckduckgo-search
+torchvision
