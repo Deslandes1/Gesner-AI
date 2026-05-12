@@ -130,6 +130,13 @@ st.markdown(
     .char-btn:hover {
         background-color: #e94560;
     }
+    .training-locked {
+        background-color: rgba(233,69,96,0.2);
+        border-left: 4px solid #e94560;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -580,8 +587,6 @@ TEXTS = {
 }
 
 # ---------- SESSION STATE ----------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
 if "training_data" not in st.session_state:
     st.session_state.training_data = []
 if "conversation_history" not in st.session_state:
@@ -607,12 +612,10 @@ if "tfidf_vectorizer" not in st.session_state:
     st.session_state.tfidf_vectorizer = None
 if "tfidf_matrix" not in st.session_state:
     st.session_state.tfidf_matrix = None
-if "current_text_input" not in st.session_state:
-    st.session_state.current_text_input = ""
-if "current_text_area" not in st.session_state:
-    st.session_state.current_text_area = ""
-if "current_edit_area" not in st.session_state:
-    st.session_state.current_edit_area = {}
+if "training_access" not in st.session_state:
+    st.session_state.training_access = False
+if "public_chat_messages" not in st.session_state:
+    st.session_state.public_chat_messages = []
 
 # ---------- VOICE CACHE ----------
 VOICE_CACHE_DIR = "voice_cache"
@@ -669,17 +672,6 @@ def retrieve_relevant_facts(query, k=3, threshold=1.2):
             results.append(st.session_state.texts[idx])
     return results
 
-def french_web_search(query):
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(f"{query} site:fr OR lang:fr", max_results=1))
-            if results:
-                return results[0]['body']
-            else:
-                return "Désolé, je n'ai pas trouvé d'information en ligne pour cette question. Pouvez-vous reformuler ?"
-    except Exception as e:
-        return f"Erreur de recherche : {str(e)}. Veuillez réessayer."
-
 def apply_phonics(text):
     rules = {
         r'qu': 'k', r'c([aeiou])': r'k\1', r'ç': 's',
@@ -706,17 +698,13 @@ def direct_keyword_answer(query):
             return answer
     return None
 
-# ---------- MODIFIED FALLBACK: ALWAYS FRENCH TEXT AND FRENCH TTS ----------
 def generate_answer_from_training(query, target_lang):
-    # 1) Direct keyword answers (only for Haitian Creole alphabet)
     direct_answer = direct_keyword_answer(query)
     if direct_answer and target_lang == "ht":
         return direct_answer, False, None
-    # 2) Retrieve from trained facts (semantic + keyword)
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
-    # 3) Fallback: always return French text + French TTS
     french_fallback = "Je n'ai pas encore appris cela. Veuillez m'enseigner dans le Centre d'entraînement."
     return french_fallback, True, "fr"
 
@@ -725,19 +713,41 @@ def generate_response(user_input, target_lang):
 
 def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
     if is_fallback:
-        # fallback_audio_lang is "fr" from our modified function
-        lang_map = {"fr": "fr-FR"}
-        tts_lang = lang_map.get(fallback_audio_lang, "fr-FR")
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
         <script>
-            document.getElementById('ttsBtn_{key_suffix}').onclick = () => {{
-                const utterance = new SpeechSynthesisUtterance({safe_text});
-                utterance.lang = '{tts_lang}';
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
-            }};
+            (function() {{
+                const btn = document.getElementById('ttsBtn_{key_suffix}');
+                let utterance = null;
+                function speakWithFrenchVoice() {{
+                    if (utterance) window.speechSynthesis.cancel();
+                    utterance = new SpeechSynthesisUtterance({safe_text});
+                    utterance.lang = 'fr-FR';
+                    let voices = window.speechSynthesis.getVoices();
+                    if (voices.length === 0) {{
+                        window.speechSynthesis.onvoiceschanged = function() {{
+                            voices = window.speechSynthesis.getVoices();
+                            selectFrenchVoice(voices, utterance);
+                            window.speechSynthesis.speak(utterance);
+                        }};
+                        return;
+                    }}
+                    selectFrenchVoice(voices, utterance);
+                    window.speechSynthesis.speak(utterance);
+                }}
+                function selectFrenchVoice(voices, utterance) {{
+                    const priorityNames = ['Google français', 'Microsoft Hortense', 'Microsoft Denis', 'Samantha', 'Thomas', 'Google 프랑스어'];
+                    let selected = null;
+                    for (let name of priorityNames) {{
+                        selected = voices.find(v => v.lang === 'fr-FR' && v.name.includes(name));
+                        if (selected) break;
+                    }}
+                    if (!selected) selected = voices.find(v => v.lang === 'fr-FR');
+                    if (selected) utterance.voice = selected;
+                }}
+                btn.onclick = speakWithFrenchVoice;
+            }})();
         </script>
         """
         return html
@@ -842,20 +852,19 @@ def load_previous_training():
         except Exception:
             pass
 
-# Pre‑train intro text
-intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
-if intro_text_ht not in [item["text"] for item in st.session_state.training_data]:
-    embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
-    st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
-    st.session_state.texts = [intro_text_ht]
-    dim = len(embedding)
-    st.session_state.index = faiss.IndexFlatL2(dim)
-    st.session_state.index.add(np.array([embedding], dtype=np.float32))
-    build_tfidf()
-    with open("training_data.json", "w") as f:
-        json.dump(st.session_state.training_data, f, indent=2)
+def ensure_intro_text():
+    intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+    if intro_text_ht not in [item["text"] for item in st.session_state.training_data]:
+        embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
+        st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
+        st.session_state.texts = [intro_text_ht]
+        dim = len(embedding)
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.index.add(np.array([embedding], dtype=np.float32))
+        build_tfidf()
+        with open("training_data.json", "w") as f:
+            json.dump(st.session_state.training_data, f, indent=2)
 
-# ---------- HAITIAN CREOLE CHARACTER PICKER ----------
 def character_picker(key_prefix, label="Insert Kreyòl characters:"):
     chars = [
         "e", "è", "E", "È", "o", "ò", "O", "Ò",
@@ -885,58 +894,47 @@ def character_picker(key_prefix, label="Insert Kreyòl characters:"):
                     st.session_state[key] = current + ch
                     st.rerun()
 
-# ---------- LOGIN PAGE ----------
-def login_page():
+# ---------- PUBLIC CHAT MODE ----------
+def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
-    t = TEXTS[ui_lang]
-    st.markdown(f"""
-    <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-        <div class="login-card" style="background: rgba(15,52,96,0.8); backdrop-filter: blur(12px); border-radius: 30px; padding: 2rem; text-align: center; border: 1px solid #e94560; width: 100%; max-width: 450px; margin: auto;">
-            <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-            <div class="login-title" style="color: #ffd966; font-size: 2rem; margin-bottom: 1rem;">{t['login_title']}</div>
-            <p style="color:white;">{t['login_message']}</p>
-    """, unsafe_allow_html=True)
-    password = st.text_input("Password", type="password", key="login_pass")
-    if st.button(t['login_button'], use_container_width=True):
-        if password == "Nov1979":
-            st.session_state.authenticated = True
-            st.rerun()
+    t = TEXTS[ui_lang] if ui_lang in TEXTS else TEXTS["en"]
+    st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Ask me anything – I answer based on what my trainer has taught me.</p>", unsafe_allow_html=True)
+    
+    for idx, msg in enumerate(st.session_state.public_chat_messages):
+        if msg["role"] == "user":
+            st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
         else:
-            st.error(t['wrong_password'])
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-def show_sidebar():
-    lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
-    selected_lang_code = LANGUAGES[selected_lang_name]
-    st.session_state.ui_language = selected_lang_code
-    st.session_state.chat_language = selected_lang_code
-    t = TEXTS[st.session_state.ui_language]
-
-    st.sidebar.markdown("""
-    <div style="text-align: center;">
-        <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.sidebar.markdown(f"## **{t['sidebar_company']}**")
-    st.sidebar.markdown(f"### {t['sidebar_product']}")
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"**{t['built_by']}**")
-    st.sidebar.markdown(t['phone'])
-    st.sidebar.markdown(t['email'])
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"{t['website_label']} [{t['website_link']}]({t['website_link']})")
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"### {t['pricing_title']}")
-    st.sidebar.markdown(t['pricing_table'])
+            col1, col2 = st.columns([10, 1])
+            with col1:
+                st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+            with col2:
+                btn_html = play_voice_button(
+                    msg["content"],
+                    msg.get("is_fallback", False),
+                    msg.get("fallback_lang"),
+                    "🔊",
+                    f"public_{idx}"
+                )
+                if btn_html:
+                    st.components.v1.html(btn_html, height=50)
     
-    chat_mode_toggle = st.sidebar.toggle(t['toggle_chat_mode'], value=st.session_state.chat_mode, key="chat_mode_toggle")
-    if chat_mode_toggle != st.session_state.chat_mode:
-        st.session_state.chat_mode = chat_mode_toggle
-        st.rerun()
+    user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
+    if st.button(t["send_button"], use_container_width=True, key="public_send"):
+        if user_input.strip():
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(user_input, target_lang)
+            st.session_state.public_chat_messages.append({"role": "user", "content": user_input})
+            st.session_state.public_chat_messages.append({
+                "role": "assistant",
+                "content": answer,
+                "is_fallback": is_fallback,
+                "fallback_lang": fallback_lang
+            })
+            st.rerun()
     
-    if st.sidebar.button(t['logout_button'], use_container_width=True):
-        st.session_state.authenticated = False
+    if st.button("Clear Chat", use_container_width=True, key="public_clear"):
+        st.session_state.public_chat_messages = []
         st.rerun()
 
 # ---------- DICTIONARY MANAGER ----------
@@ -1131,46 +1129,6 @@ def test_training(t):
         elif not st.session_state.test_is_fallback:
             st.info("No voice recorded for this answer. You can upload your voice above.")
 
-def chat_mode_interface():
-    ui_lang = st.session_state.get("ui_language", "en")
-    t = TEXTS[ui_lang]
-    st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['chat_mode_title']}</h1>", unsafe_allow_html=True)
-    if "chat_messages" not in st.session_state:
-        st.session_state.chat_messages = []
-    for idx, msg in enumerate(st.session_state.chat_messages):
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
-        else:
-            col1, col2 = st.columns([10, 1])
-            with col1:
-                st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
-            with col2:
-                btn_html = play_voice_button(
-                    msg["content"],
-                    msg.get("is_fallback", False),
-                    msg.get("fallback_lang"),
-                    t['chat_speak_button'],
-                    f"chat_{idx}"
-                )
-                if btn_html:
-                    st.components.v1.html(btn_html, height=50)
-    user_input = st.text_input(t['chat_mode_placeholder'], key="chat_input_new")
-    if st.button(t['send_button'], use_container_width=True, key="chat_send_new"):
-        if user_input.strip():
-            target_lang = st.session_state.chat_language
-            answer, is_fallback, fallback_lang = generate_response(user_input, target_lang)
-            st.session_state.chat_messages.append({"role": "user", "content": user_input})
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": answer,
-                "is_fallback": is_fallback,
-                "fallback_lang": fallback_lang
-            })
-            st.rerun()
-    if st.button("Clear Chat", use_container_width=True, key="clear_chat_new"):
-        st.session_state.chat_messages = []
-        st.rerun()
-
 def phonics_training(t):
     st.subheader(t.get("phonics_title", "🔊 Phonics Training (32 Letters)"))
     col1, col2 = st.columns([1,2])
@@ -1198,12 +1156,10 @@ def phonics_training(t):
     else:
         st.info("No phonics examples taught yet.")
 
-# ---------- BULK TRAINING ----------
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
     st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
     
-    # CSV file
     csv_file = st.file_uploader(t['bulk_csv_label'], type=["csv"], key="bulk_csv")
     if csv_file:
         try:
@@ -1233,7 +1189,6 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading CSV: {e}")
     
-    # JSON file
     json_file = st.file_uploader(t['bulk_json_label'], type=["json"], key="bulk_json")
     if json_file:
         try:
@@ -1254,7 +1209,6 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading JSON: {e}")
     
-    # Plain text
     text_facts = st.text_area(t['bulk_text_label'], height=200, key="bulk_text")
     if text_facts.strip():
         lines = [line.strip() for line in text_facts.split('\n') if line.strip()]
@@ -1267,27 +1221,22 @@ def bulk_training(t):
             st.success(f"Imported {count} facts.")
             st.rerun()
 
+# ---------- TRAINING MODE (full access) ----------
 def training_mode():
     ui_lang = st.session_state.get("ui_language", "en")
-    t = TEXTS[ui_lang]
-    st.markdown(f"<h1 style='text-align:center;'>{t['training_app_title']}</h1>", unsafe_allow_html=True)
+    t = TEXTS[ui_lang] if ui_lang in TEXTS else TEXTS["en"]
+    st.markdown(f"<h1 style='text-align:center;'>🔒 {t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
-
-    # Sanitize conversation history
-    clean_history = []
-    for msg in st.session_state.conversation_history:
-        if isinstance(msg, dict) and "role" in msg and "content" in msg:
-            clean_history.append(msg)
-    st.session_state.conversation_history = clean_history
-
+    
+    # Chat area inside training (same as original)
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
-
-    character_picker("train_chat_input", "Insert Kreyòl characters (click a button, then click inside the text box):")
+    
+    character_picker("train_chat_input", "Insert Kreyòl characters:")
     user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
     if st.button(t["send_button"], use_container_width=True):
         if user_input.strip():
@@ -1296,7 +1245,7 @@ def training_mode():
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             st.session_state.conversation_history.append({"role": "assistant", "content": answer})
             st.rerun()
-
+    
     st.markdown("---")
     st.markdown(f"## {t['training_text_title']}")
     with st.expander(t["expand_text"]):
@@ -1304,11 +1253,11 @@ def training_mode():
         text = st.text_area(t["text_area_label"], key="train_text")
         if st.button(t["train_text_button"], use_container_width=True):
             add_to_training(text, t)
-
+    
     st.markdown(f"## {t['audio_title']}")
     with st.expander(t["expand_audio"]):
         voice_training(t)
-
+    
     st.markdown(f"## {t['image_title']}")
     with st.expander(t["expand_image"]):
         img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
@@ -1321,7 +1270,7 @@ def training_mode():
                     add_to_training(desc, t)
                 else:
                     st.warning(t['warning_no_description'])
-
+    
     st.markdown(f"## {t['file_title']}")
     with st.expander(t["expand_file"]):
         txt_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
@@ -1331,10 +1280,8 @@ def training_mode():
             if st.button(t["train_file_button"], use_container_width=True):
                 add_to_training(content, t)
     
-    # Bulk Training section
     st.markdown("---")
     bulk_training(t)
-
     st.markdown("---")
     dictionary_manager(t)
     st.markdown("---")
@@ -1346,7 +1293,7 @@ def training_mode():
     st.markdown("---")
     phonics_training(t)
     st.markdown("---")
-
+    
     # Manage Trained Facts
     st.markdown(f"## {t.get('manage_facts', '📚 Manage Trained Facts')}")
     if not st.session_state.training_data:
@@ -1373,35 +1320,83 @@ def training_mode():
                         st.rerun()
                 voice_exists = get_voice_for_text(original) is not None
                 st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
-
+    
     st.markdown("---")
     st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
     if st.button(t["clear_chat_button"], use_container_width=True):
         st.session_state.conversation_history = []
         st.rerun()
 
-def main_app():
-    load_previous_training()
-    show_sidebar()
-    if st.session_state.chat_mode:
-        chat_mode_interface()
-    else:
-        training_mode()
-    ui_lang = st.session_state.get("ui_language", "en")
-    t = TEXTS[ui_lang]
-    st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
-
-# ---------- ROUTING ----------
-if "ui_language" not in st.session_state:
-    st.session_state.ui_language = "en"
-if "chat_language" not in st.session_state:
-    st.session_state.chat_language = "en"
-
-if not st.session_state.authenticated:
+# ---------- SIDEBAR ----------
+def show_sidebar():
     lang_names = list(LANGUAGES.keys())
-    selected_lang_name = st.selectbox("🌐 Language", lang_names, key="login_lang")
-    st.session_state.ui_language = LANGUAGES[selected_lang_name]
-    st.session_state.chat_language = st.session_state.ui_language
-    login_page()
-else:
-    main_app()
+    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
+    selected_lang_code = LANGUAGES[selected_lang_name]
+    st.session_state.ui_language = selected_lang_code
+    st.session_state.chat_language = selected_lang_code
+    t = TEXTS[st.session_state.ui_language] if st.session_state.ui_language in TEXTS else TEXTS["en"]
+    
+    st.sidebar.markdown("""
+    <div style="text-align: center;">
+        <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.sidebar.markdown(f"## **{t['sidebar_company']}**")
+    st.sidebar.markdown(f"### {t['sidebar_product']}")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"**{t['built_by']}**")
+    st.sidebar.markdown(t['phone'])
+    st.sidebar.markdown(t['email'])
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"{t['website_label']} [{t['website_link']}]({t['website_link']})")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"### {t['pricing_title']}")
+    st.sidebar.markdown(t['pricing_table'])
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔐 Trainer Access")
+    if not st.session_state.training_access:
+        train_pass = st.sidebar.text_input("Training password", type="password", key="train_pass")
+        if st.sidebar.button("Unlock Training Center"):
+            if train_pass == "Nov1979":
+                st.session_state.training_access = True
+                st.sidebar.success("Access granted!")
+                st.rerun()
+            else:
+                st.sidebar.error("Wrong password")
+    else:
+        st.sidebar.success("✅ Training mode active")
+        if st.sidebar.button("Lock Training Center"):
+            st.session_state.training_access = False
+            st.rerun()
+    
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Reset Public Chat"):
+        st.session_state.public_chat_messages = []
+        st.rerun()
+
+# ---------- MAIN ----------
+def main():
+    load_previous_training()
+    ensure_intro_text()
+    show_sidebar()
+    
+    if st.session_state.training_access:
+        mode = st.radio("Select mode", ["💬 Public Chat Mode", "🔧 Training Center"], horizontal=True)
+        if mode == "💬 Public Chat Mode":
+            public_chat_interface()
+        else:
+            training_mode()
+    else:
+        public_chat_interface()
+    
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS[ui_lang] if ui_lang in TEXTS else TEXTS["en"]
+    st.markdown(f'<div class="footer">{t["footer"]} | Public chat always free, training protected</div>', unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    if "ui_language" not in st.session_state:
+        st.session_state.ui_language = "en"
+    if "chat_language" not in st.session_state:
+        st.session_state.chat_language = "en"
+    main()
