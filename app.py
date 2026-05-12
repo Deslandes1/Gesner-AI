@@ -12,7 +12,6 @@ import hashlib
 import re
 import csv
 import io
-import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from duckduckgo_search import DDGS
@@ -130,6 +129,13 @@ st.markdown(
     }
     .char-btn:hover {
         background-color: #e94560;
+    }
+    .training-locked {
+        background-color: rgba(233,69,96,0.2);
+        border-left: 4px solid #e94560;
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
     }
     </style>
     """,
@@ -685,7 +691,7 @@ def apply_phonics(text):
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     
-    # Vowels (vwayèl) - handles typos
+    # Vowels (vwayèl)
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
     
@@ -697,7 +703,7 @@ def direct_keyword_answer(query):
     if re.search(r"konbyen l[eè]t", q_lower) or "konbyen let" in q_lower:
         return "Alfabè kreyòl la gen 32 lèt: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
     
-    # List all letters
+    # List letters
     if re.search(r"site tout l[eè]t|site l[eè]t|l[eè]t yo", q_lower):
         return "A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
     
@@ -705,13 +711,9 @@ def direct_keyword_answer(query):
     if "kisa alfabè a ye" in q_lower or "kisa alfabè" in q_lower:
         return "Alfabè kreyòl la se 32 let ki reprezante tout son lang lan."
     
-    # How to write alphabet
-    if "kouman pou ekri alfabet la" in q_lower or "ekri alfabè" in q_lower:
-        return "Alfabè kreyòl la ekri: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    
     # Identity
     identity_queries = [
-        "kijan ou rele", "kiyès ou ye", "kisa ou ye", "kijan ou rele?",
+        "kijan ou rele", "kiyès ou ye", "kisa ou ye",
         "ki moun ou ye", "what is your name", "who are you"
     ]
     if any(q in q_lower for q in identity_queries):
@@ -731,40 +733,39 @@ def direct_keyword_answer(query):
     
     return None
 
-# ---------- LOGICAL REASONING ----------
+# ---------- LOGICAL REASONING FALLBACK ----------
 def reason_about_question(query, lang):
     q = query.lower().strip()
     
-    # Simple math
-    math_match = re.search(r"(\d+)\s*[\+\-\*\/]\s*(\d+)", q)
+    # Simple arithmetic
+    math_match = re.search(r"(\d+)\s*([\+\-\*\/])\s*(\d+)", q)
     if math_match:
         try:
-            a, b = int(math_match.group(1)), int(math_match.group(2))
-            if '+' in q:
-                result = a + b
-            elif '-' in q:
-                result = a - b
-            elif '*' in q or 'x' in q:
-                result = a * b
-            elif '/' in q:
-                result = a / b
+            a, op, b = int(math_match.group(1)), math_match.group(2), int(math_match.group(3))
+            if op == '+':
+                res = a + b
+            elif op == '-':
+                res = a - b
+            elif op == '*':
+                res = a * b
+            elif op == '/':
+                res = a / b
             else:
-                result = None
-            if result is not None:
+                res = None
+            if res is not None:
                 if lang == "ht":
-                    return f"Repons lan se {result}."
+                    return f"Repons lan se {res}."
                 elif lang == "fr":
-                    return f"La réponse est {result}."
+                    return f"La réponse est {res}."
                 elif lang == "es":
-                    return f"La respuesta es {result}."
+                    return f"La respuesta es {res}."
                 else:
-                    return f"The answer is {result}."
+                    return f"The answer is {res}."
         except:
             pass
     
     # Capitals
-    capital_match = re.search(r"kapital|capital|capital of|capitale de", q)
-    if capital_match:
+    if "kapital" in q or "capital" in q:
         capitals = {
             "france": "Paris",
             "ayiti": "Pòtoprens",
@@ -790,8 +791,9 @@ def reason_about_question(query, lang):
                 else:
                     return f"The capital of {country.title()} is {cap}."
     
-    # Time
+    # Current time
     if "ki lè li ye" in q or "what time" in q:
+        import datetime
         now = datetime.datetime.now().strftime("%H:%M")
         if lang == "ht":
             return f"Kounye a li {now}."
@@ -804,20 +806,24 @@ def reason_about_question(query, lang):
     
     return None
 
-# ---------- INTELLIGENT RESPONSE ----------
+# ---------- INTELLIGENT RESPONSE WITH THINKING ----------
 def generate_answer_from_training(query, target_lang):
+    # 1) Direct keyword matches
     direct_answer = direct_keyword_answer(query)
     if direct_answer:
         return direct_answer, False, None
     
+    # 2) Retrieve from trained facts
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
     
+    # 3) Logical reasoning
     reason_answer = reason_about_question(query, target_lang)
     if reason_answer:
         return reason_answer, False, None
     
+    # 4) Polite fallback
     fallbacks = {
         "en": "I don't have an answer for that yet. Please teach me in the Training Center so I can answer it next time.",
         "fr": "Je n'ai pas encore de réponse. Veuillez m'enseigner dans le Centre d'entraînement.",
@@ -827,8 +833,9 @@ def generate_answer_from_training(query, target_lang):
     return fallbacks.get(target_lang, fallbacks["en"]), True, target_lang
 
 def generate_response(user_input, target_lang):
+    # Simulate thinking
     with st.spinner("🤔 Gesner AI ap reflechi..."):
-        time.sleep(0.5)
+        time.sleep(0.4)
         answer, is_fallback, fallback_lang = generate_answer_from_training(user_input, target_lang)
     return answer, is_fallback, fallback_lang
 
@@ -1066,7 +1073,6 @@ def save_encyclopedia():
     with open("encyclopedia.json", "w") as f:
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
-# ---------- VOICE TRAINING ----------
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
     st.info("🎙️ Upload your voice for Kreyòl phrases. Gesner AI will use your exact voice when answering those sentences.")
@@ -1129,7 +1135,6 @@ def voice_training(t):
             add_to_training(transcript.strip(), t)
             st.success(t['voice_success'])
 
-# ---------- TRANSLATION CORRECTION ----------
 def translation_correction(t):
     st.markdown(f"## {t['translation_title']}")
     source = st.text_area(t['translation_source_text'], height=100)
@@ -1156,7 +1161,6 @@ def translation_correction(t):
             else:
                 st.warning(t['warning_no_text'])
 
-# ---------- ENCYCLOPEDIA MANAGER ----------
 def encyclopedia_manager(t):
     st.markdown(f"## {t['encyclopedia_title']}")
     with st.expander(t['encyclopedia_add']):
@@ -1184,7 +1188,6 @@ def encyclopedia_manager(t):
                 save_encyclopedia()
                 st.rerun()
 
-# ---------- TEST TRAINING ----------
 def test_training(t):
     st.markdown(f"## {t['test_title']}")
     q = st.text_input(t['test_question'])
@@ -1217,7 +1220,6 @@ def test_training(t):
         elif not st.session_state.test_is_fallback:
             st.info("No voice recorded for this answer. You can upload your voice above.")
 
-# ---------- PHONICS TRAINING ----------
 def phonics_training(t):
     st.subheader(t.get("phonics_title", "🔊 Phonics Training (32 Letters)"))
     col1, col2 = st.columns([1,2])
@@ -1245,7 +1247,6 @@ def phonics_training(t):
     else:
         st.info("No phonics examples taught yet.")
 
-# ---------- BULK TRAINING ----------
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
     st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
@@ -1312,7 +1313,7 @@ def training_mode():
     st.markdown(f"<h1 style='text-align:center;'>🔒 {t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
-    # Chat area inside training
+    # Chat inside training
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -1411,13 +1412,29 @@ def training_mode():
         st.session_state.conversation_history = []
         st.rerun()
 
-# ---------- PUBLIC CHAT MODE ----------
+# ---------- PUBLIC CHAT MODE (with question selector) ----------
 def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
     st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Ask me anything – I will think and answer based on my training.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Select a trained question below or type your own.</p>", unsafe_allow_html=True)
     
+    # ----- QUESTION SELECTOR (from trained facts) -----
+    if st.session_state.texts:
+        options = []
+        for idx, fact in enumerate(st.session_state.texts):
+            display = fact[:80] + "..." if len(fact) > 80 else fact
+            options.append(f"{idx+1}: {display}")
+        
+        selected_option = st.selectbox("📚 Choose a trained fact:", options, key="trained_question_selector")
+        if selected_option:
+            idx = int(selected_option.split(":")[0]) - 1
+            selected_fact = st.session_state.texts[idx]
+            # Append to chat history and rerun to display immediately
+            st.session_state.public_chat_messages.append({"role": "assistant", "content": selected_fact, "is_fallback": False, "fallback_lang": None})
+            st.rerun()
+    
+    # ----- CHAT HISTORY -----
     for idx, msg in enumerate(st.session_state.public_chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -1436,6 +1453,7 @@ def public_chat_interface():
                 if btn_html:
                     st.components.v1.html(btn_html, height=50)
     
+    # ----- FREE TEXT INPUT -----
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
     if st.button(t["send_button"], use_container_width=True, key="public_send"):
         if user_input.strip():
