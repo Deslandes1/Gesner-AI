@@ -1,6 +1,8 @@
+import os
+os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
+
 import streamlit as st
 import json
-import os
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
@@ -691,7 +693,7 @@ def apply_phonics(text):
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     
-    # Vowels (vwayèl)
+    # Vowels
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
     
@@ -733,7 +735,7 @@ def direct_keyword_answer(query):
     
     return None
 
-# ---------- LOGICAL REASONING FALLBACK ----------
+# ---------- LOGICAL REASONING ----------
 def reason_about_question(query, lang):
     q = query.lower().strip()
     
@@ -764,7 +766,7 @@ def reason_about_question(query, lang):
         except:
             pass
     
-    # Capitals
+    # Capital cities
     if "kapital" in q or "capital" in q:
         capitals = {
             "france": "Paris",
@@ -808,22 +810,22 @@ def reason_about_question(query, lang):
 
 # ---------- INTELLIGENT RESPONSE WITH THINKING ----------
 def generate_answer_from_training(query, target_lang):
-    # 1) Direct keyword matches
-    direct_answer = direct_keyword_answer(query)
-    if direct_answer:
-        return direct_answer, False, None
+    # Phase 1: direct keywords
+    direct = direct_keyword_answer(query)
+    if direct:
+        return direct, False, None
     
-    # 2) Retrieve from trained facts
-    best_facts = retrieve_facts_hybrid(query, k=3)
-    if best_facts:
-        return best_facts[0], False, None
+    # Phase 2: trained facts (semantic + keyword)
+    facts = retrieve_facts_hybrid(query, k=3)
+    if facts:
+        return facts[0], False, None
     
-    # 3) Logical reasoning
-    reason_answer = reason_about_question(query, target_lang)
-    if reason_answer:
-        return reason_answer, False, None
+    # Phase 3: logical reasoning
+    logic = reason_about_question(query, target_lang)
+    if logic:
+        return logic, False, None
     
-    # 4) Polite fallback in user's language
+    # Phase 4: fallback
     fallbacks = {
         "en": "I don't have an answer for that yet. Please teach me in the Training Center so I can answer it next time.",
         "fr": "Je n'ai pas encore de réponse. Veuillez m'enseigner dans le Centre d'entraînement.",
@@ -1404,13 +1406,14 @@ def training_mode():
         st.session_state.conversation_history = []
         st.rerun()
 
+# ---------- PUBLIC CHAT MODE (with question selector) ----------
 def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
     st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center;'>Select a trained question below or type your own. I will think and answer.</p>", unsafe_allow_html=True)
     
-    # Question selector (dropdown)
+    # Question selector dropdown
     if st.session_state.texts:
         options = []
         for idx, fact in enumerate(st.session_state.texts):
@@ -1461,6 +1464,7 @@ def public_chat_interface():
         st.session_state.public_chat_messages = []
         st.rerun()
 
+# ---------- SIDEBAR ----------
 def show_sidebar():
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
@@ -1508,6 +1512,7 @@ def show_sidebar():
         st.session_state.public_chat_messages = []
         st.rerun()
 
+# ---------- MAIN ----------
 def main():
     load_previous_training()
     ensure_intro_text()
