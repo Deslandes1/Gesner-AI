@@ -691,7 +691,7 @@ def apply_phonics(text):
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     
-    # Vowels (vwayèl)
+    # Vowels
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
     
@@ -733,7 +733,7 @@ def direct_keyword_answer(query):
     
     return None
 
-# ---------- LOGICAL REASONING FALLBACK ----------
+# ---------- LOGICAL REASONING ----------
 def reason_about_question(query, lang):
     q = query.lower().strip()
     
@@ -764,7 +764,7 @@ def reason_about_question(query, lang):
         except:
             pass
     
-    # Capitals
+    # Capital cities
     if "kapital" in q or "capital" in q:
         capitals = {
             "france": "Paris",
@@ -808,22 +808,22 @@ def reason_about_question(query, lang):
 
 # ---------- INTELLIGENT RESPONSE WITH THINKING ----------
 def generate_answer_from_training(query, target_lang):
-    # 1) Direct keyword matches
-    direct_answer = direct_keyword_answer(query)
-    if direct_answer:
-        return direct_answer, False, None
+    # Phase 1: direct keywords
+    direct = direct_keyword_answer(query)
+    if direct:
+        return direct, False, None
     
-    # 2) Retrieve from trained facts
-    best_facts = retrieve_facts_hybrid(query, k=3)
-    if best_facts:
-        return best_facts[0], False, None
+    # Phase 2: trained facts (semantic + keyword)
+    facts = retrieve_facts_hybrid(query, k=3)
+    if facts:
+        return facts[0], False, None
     
-    # 3) Logical reasoning
-    reason_answer = reason_about_question(query, target_lang)
-    if reason_answer:
-        return reason_answer, False, None
+    # Phase 3: logical reasoning
+    logic = reason_about_question(query, target_lang)
+    if logic:
+        return logic, False, None
     
-    # 4) Polite fallback
+    # Phase 4: fallback
     fallbacks = {
         "en": "I don't have an answer for that yet. Please teach me in the Training Center so I can answer it next time.",
         "fr": "Je n'ai pas encore de réponse. Veuillez m'enseigner dans le Centre d'entraînement.",
@@ -833,8 +833,7 @@ def generate_answer_from_training(query, target_lang):
     return fallbacks.get(target_lang, fallbacks["en"]), True, target_lang
 
 def generate_response(user_input, target_lang):
-    # Simulate thinking
-    with st.spinner("🤔 Gesner AI ap reflechi..."):
+    with st.spinner("🤔 Gesner AI ap reflechi / is thinking..."):
         time.sleep(0.4)
         answer, is_fallback, fallback_lang = generate_answer_from_training(user_input, target_lang)
     return answer, is_fallback, fallback_lang
@@ -1028,7 +1027,6 @@ def character_picker(key_prefix, label="Insert Kreyòl characters:"):
                     st.session_state[key] = current + ch
                     st.rerun()
 
-# ---------- DICTIONARY MANAGER ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -1259,7 +1257,6 @@ def bulk_training(t):
                     count += 1
         st.success(f"Imported {count} facts.")
     
-    # CSV
     csv_file = st.file_uploader(t['bulk_csv_label'], type=["csv"], key="bulk_csv")
     if csv_file:
         try:
@@ -1283,7 +1280,6 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading CSV: {e}")
     
-    # JSON
     json_file = st.file_uploader(t['bulk_json_label'], type=["json"], key="bulk_json")
     if json_file:
         try:
@@ -1298,7 +1294,6 @@ def bulk_training(t):
         except Exception as e:
             st.error(f"Error reading JSON: {e}")
     
-    # Plain text
     text_facts = st.text_area(t['bulk_text_label'], height=200, key="bulk_text")
     if text_facts.strip():
         lines = [line.strip() for line in text_facts.split('\n') if line.strip()]
@@ -1306,14 +1301,12 @@ def bulk_training(t):
         if st.button(t['bulk_import_button'], key="import_text"):
             import_facts(lines)
 
-# ---------- TRAINING MODE ----------
 def training_mode():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
     st.markdown(f"<h1 style='text-align:center;'>🔒 {t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
-    # Chat inside training
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -1379,7 +1372,6 @@ def training_mode():
     phonics_training(t)
     st.markdown("---")
     
-    # Manage Trained Facts
     st.markdown(f"## {t.get('manage_facts', '📚 Manage Trained Facts')}")
     if not st.session_state.training_data:
         st.info("No facts trained yet. Use the training tools above.")
@@ -1417,24 +1409,22 @@ def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
     st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Select a trained question below or type your own.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>Select a trained question below or type your own. I will think and answer.</p>", unsafe_allow_html=True)
     
-    # ----- QUESTION SELECTOR (from trained facts) -----
+    # Question selector dropdown
     if st.session_state.texts:
         options = []
         for idx, fact in enumerate(st.session_state.texts):
             display = fact[:80] + "..." if len(fact) > 80 else fact
             options.append(f"{idx+1}: {display}")
-        
         selected_option = st.selectbox("📚 Choose a trained fact:", options, key="trained_question_selector")
         if selected_option:
             idx = int(selected_option.split(":")[0]) - 1
             selected_fact = st.session_state.texts[idx]
-            # Append to chat history and rerun to display immediately
             st.session_state.public_chat_messages.append({"role": "assistant", "content": selected_fact, "is_fallback": False, "fallback_lang": None})
             st.rerun()
     
-    # ----- CHAT HISTORY -----
+    # Chat history
     for idx, msg in enumerate(st.session_state.public_chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -1453,7 +1443,7 @@ def public_chat_interface():
                 if btn_html:
                     st.components.v1.html(btn_html, height=50)
     
-    # ----- FREE TEXT INPUT -----
+    # Free text input
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
     if st.button(t["send_button"], use_container_width=True, key="public_send"):
         if user_input.strip():
