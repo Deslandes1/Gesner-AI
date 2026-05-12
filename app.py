@@ -1,8 +1,9 @@
-# ===== FAST STARTUP OPTIMIZATIONS =====
+# ===== EXTREME OPTIMIZATIONS =====
 import os
 os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 import streamlit as st
 import json
@@ -582,12 +583,12 @@ TEXTS = {
     }
 }
 
-# ---------- SESSION STATE INITIALIZATION ----------
+# ---------- SESSION STATE ----------
 if "training_data" not in st.session_state:
     st.session_state.training_data = []
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
-# embedding_model is now cached via @st.cache_resource – not stored in session_state
+# model is cached, not stored here
 st.session_state.index = None
 st.session_state.texts = []
 if "chat_mode" not in st.session_state:
@@ -611,7 +612,7 @@ if "training_access" not in st.session_state:
 if "public_chat_messages" not in st.session_state:
     st.session_state.public_chat_messages = []
 
-# ---------- API KEY PROTECTION ----------
+# ---------- API KEY ----------
 REQUIRED_API_KEY = "PNL_fJC4L5QNjA0GJbc4N8TzIXBjdfIXfgcLv1yZ8Yc"
 
 # ---------- VOICE CACHE ----------
@@ -637,20 +638,18 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-# ---------- CACHED MODEL LOADER ----------
+# ---------- CACHED MODEL (tiny) ----------
 @st.cache_resource
 def load_embedding_model():
-    """Load SentenceTransformer model once and cache globally."""
+    """Load a very small embedding model (21 MB) and cache globally."""
     from sentence_transformers import SentenceTransformer
-    with st.spinner("🤖 Loading AI model (first time only) – please wait..."):
-        # all-MiniLM-L6-v2 is ~80MB; you can switch to all-MiniLM-L3-v2 (21MB) for faster cold starts
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+    with st.spinner("🧠 Loading AI model – first launch takes ~10 seconds..."):
+        # all-MiniLM-L3-v2 is only 21 MB (vs 80 MB)
+        model = SentenceTransformer('all-MiniLM-L3-v2')
     return model
 
-# ---------- HELPER FUNCTIONS (lazy imports) ----------
-
+# ---------- LATE IMPORTS FOR SPEED ----------
 def build_tfidf():
-    """Build TF-IDF index from current texts."""
     if st.session_state.texts:
         from sklearn.feature_extraction.text import TfidfVectorizer
         st.session_state.tfidf_vectorizer = TfidfVectorizer(stop_words=None)
@@ -697,57 +696,39 @@ def apply_phonics(text):
         corrected = re.sub(pattern, repl, corrected, flags=re.IGNORECASE)
     return corrected[0].upper() + corrected[1:] if corrected else ""
 
-# ---------- DIRECT KEYWORD ANSWERS (FIXED) ----------
+# ---------- DIRECT KEYWORD ANSWERS ----------
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     
-    # Vowels
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
-    
-    # Consonants
     if re.search(r"konbyen konsò?n", q_lower):
         return "Alfabè kreyòl la gen 24 konsòn."
-    
-    # Total letters
     if re.search(r"konbyen l[eè]t", q_lower) or "konbyen let" in q_lower:
         return "Alfabè kreyòl la gen 32 lèt: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    
-    # List letters
     if re.search(r"site tout l[eè]t|site l[eè]t|l[eè]t yo", q_lower):
         return "A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    
-    # What is alphabet
     if "kisa alfabè a ye" in q_lower or "kisa alfabè" in q_lower:
         return "Alfabè kreyòl la se 32 let ki reprezante tout son lang lan."
-    
-    # Identity
     identity_queries = [
         "kijan ou rele", "kiyès ou ye", "kisa ou ye",
         "ki moun ou ye", "what is your name", "who are you"
     ]
     if any(q in q_lower for q in identity_queries):
         return "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
-    
-    # Creator
     creator_queries = [
         "kiyès ki kreye ou", "ki moun ki fè ou", "who created you",
         "ki moun ki devlope ou", "kiyès ki te kreye ou"
     ]
     if any(q in q_lower for q in creator_queries):
         return "Mwen te kreye pa Gesner Deslandes, fondatè GlobalInternet.py. Li se yon enjenyè ki renmen edike Ayiti."
-    
-    # Greetings
     if q_lower in ["bonjou", "bonswa", "hello", "hi", "salut"]:
         return "Bonjou! Kijan ou ye? Mwen la pou reponn kesyon ou."
-    
     return None
 
 # ---------- LOGICAL REASONING ----------
 def reason_about_question(query, lang):
     q = query.lower().strip()
-    
-    # Simple arithmetic
     math_match = re.search(r"(\d+)\s*([\+\-\*\/])\s*(\d+)", q)
     if math_match:
         try:
@@ -773,22 +754,12 @@ def reason_about_question(query, lang):
                     return f"The answer is {res}."
         except:
             pass
-    
-    # Capital cities
     if "kapital" in q or "capital" in q:
         capitals = {
-            "france": "Paris",
-            "ayiti": "Pòtoprens",
-            "haiti": "Port‑au‑Prince",
-            "etazini": "Washington, D.C.",
-            "usa": "Washington, D.C.",
-            "kanada": "Ottawa",
-            "brezil": "Brasília",
-            "alman": "Bèlen",
-            "itali": "Wòm",
-            "espay": "Madrid",
-            "angle": "Londr",
-            "japon": "Tokiyo",
+            "france": "Paris", "ayiti": "Pòtoprens", "haiti": "Port‑au‑Prince",
+            "etazini": "Washington, D.C.", "usa": "Washington, D.C.",
+            "kanada": "Ottawa", "brezil": "Brasília", "alman": "Bèlen",
+            "itali": "Wòm", "espay": "Madrid", "angle": "Londr", "japon": "Tokiyo",
         }
         for country, cap in capitals.items():
             if country in q:
@@ -800,8 +771,6 @@ def reason_about_question(query, lang):
                     return f"La capital de {country.title()} es {cap}."
                 else:
                     return f"The capital of {country.title()} is {cap}."
-    
-    # Current time
     if "ki lè li ye" in q or "what time" in q:
         import datetime
         now = datetime.datetime.now().strftime("%H:%M")
@@ -813,38 +782,30 @@ def reason_about_question(query, lang):
             return f"Son las {now}."
         else:
             return f"It is {now}."
-    
     return None
 
-# ---------- INTELLIGENT RESPONSE ----------
+# ---------- GENERATE ANSWER ----------
 def generate_answer_from_training(query, target_lang):
-    # Phase 1: direct keywords
     direct = direct_keyword_answer(query)
     if direct:
         return direct, False, None
-    
-    # Phase 2: trained facts (semantic + keyword)
     facts = retrieve_facts_hybrid(query, k=3)
     if facts:
         return facts[0], False, None
-    
-    # Phase 3: logical reasoning
     logic = reason_about_question(query, target_lang)
     if logic:
         return logic, False, None
-    
-    # Phase 4: fallback
     fallbacks = {
-        "en": "I don't have an answer for that yet. Please teach me in the Training Center so I can answer it next time.",
+        "en": "I don't have an answer for that yet. Please teach me in the Training Center.",
         "fr": "Je n'ai pas encore de réponse. Veuillez m'enseigner dans le Centre d'entraînement.",
-        "ht": "Mwen poko gen repons. Tanpri anseye m nan Sant Fòmasyon pou m ka reponn pwochèn fwa.",
+        "ht": "Mwen poko gen repons. Tanpri anseye m nan Sant Fòmasyon.",
         "es": "Todavía no tengo respuesta. Por favor enséñame en el Centro de Entrenamiento."
     }
     return fallbacks.get(target_lang, fallbacks["en"]), True, target_lang
 
 def generate_response(user_input, target_lang):
     with st.spinner("🤔 Gesner AI ap reflechi / is thinking..."):
-        time.sleep(0.4)
+        time.sleep(0.2)  # reduced delay
         answer, is_fallback, fallback_lang = generate_answer_from_training(user_input, target_lang)
     return answer, is_fallback, fallback_lang
 
@@ -1045,6 +1006,7 @@ def character_picker(key_prefix, label="Insert Kreyòl characters:"):
                     st.session_state[key] = current + ch
                     st.rerun()
 
+# ---------- DICTIONARY & OTHER MANAGERS (unchanged, but call add_to_training uses new model) ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -1140,7 +1102,7 @@ def voice_training(t):
         }};
     </script>
     """
-    st.html(recorder_html)  # replaced st.components.v1.html with st.html
+    st.html(recorder_html)
     st.markdown(f"### 📂 {t['voice_upload']}")
     uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload")
     transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript")
@@ -1232,7 +1194,7 @@ def test_training(t):
             "test"
         )
         if btn_html:
-            st.html(btn_html)  # replaced st.components.v1.html with st.html
+            st.html(btn_html)
         elif not st.session_state.test_is_fallback:
             st.info("No voice recorded for this answer. You can upload your voice above.")
 
@@ -1422,14 +1384,12 @@ def training_mode():
         st.session_state.conversation_history = []
         st.rerun()
 
-# ---------- PUBLIC CHAT MODE (with question selector) ----------
 def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
     st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center;'>Select a trained question below or type your own. I will think and answer.</p>", unsafe_allow_html=True)
     
-    # Question selector dropdown
     if st.session_state.texts:
         options = []
         for idx, fact in enumerate(st.session_state.texts):
@@ -1442,7 +1402,6 @@ def public_chat_interface():
             st.session_state.public_chat_messages.append({"role": "assistant", "content": selected_fact, "is_fallback": False, "fallback_lang": None})
             st.rerun()
     
-    # Chat history
     for idx, msg in enumerate(st.session_state.public_chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -1459,9 +1418,8 @@ def public_chat_interface():
                     f"public_{idx}"
                 )
                 if btn_html:
-                    st.html(btn_html)  # replaced st.components.v1.html with st.html
+                    st.html(btn_html)
     
-    # Free text input
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
     if st.button(t["send_button"], use_container_width=True, key="public_send"):
         if user_input.strip():
@@ -1480,7 +1438,6 @@ def public_chat_interface():
         st.session_state.public_chat_messages = []
         st.rerun()
 
-# ---------- SIDEBAR ----------
 def show_sidebar():
     lang_names = list(LANGUAGES.keys())
     selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
@@ -1528,7 +1485,6 @@ def show_sidebar():
         st.session_state.public_chat_messages = []
         st.rerun()
 
-# ---------- MAIN ----------
 def main():
     load_previous_training()
     ensure_intro_text()
