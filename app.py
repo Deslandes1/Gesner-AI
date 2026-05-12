@@ -12,6 +12,7 @@ import hashlib
 import re
 import csv
 import io
+import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from duckduckgo_search import DDGS
@@ -130,13 +131,6 @@ st.markdown(
     .char-btn:hover {
         background-color: #e94560;
     }
-    .training-locked {
-        background-color: rgba(233,69,96,0.2);
-        border-left: 4px solid #e94560;
-        padding: 1rem;
-        border-radius: 12px;
-        margin: 1rem 0;
-    }
     </style>
     """,
     unsafe_allow_html=True
@@ -151,13 +145,439 @@ LANGUAGES = {
 }
 
 # ================= FULL TEXTS DICTIONARY =================
-# (Keep your existing TEXTS dictionary exactly as before – too long to repeat, but it must be here)
-# For brevity in this answer, I assume you have it. In the final code, paste your full TEXTS.
 TEXTS = {
-    "en": { ... },  # paste your existing TEXTS["en"]
-    "fr": { ... },  # paste your existing TEXTS["fr"]
-    "ht": { ... },  # paste your existing TEXTS["ht"]
-    "es": { ... }   # paste your existing TEXTS["es"]
+    "en": {
+        "training_app_title": "🧠 Gesner AI – Training Center",
+        "training_subtitle": "Teach me facts, dictionaries, encyclopedia.",
+        "chat_title": "💬 Gesner AI Chat",
+        "user_prefix": "🧑‍💻 You: ",
+        "assistant_prefix": "🤖 Gesner AI: ",
+        "send_button": "Send",
+        "chat_input_placeholder": "Ask me anything...",
+        "training_text_title": "📚 Train Me (Text)",
+        "expand_text": "Add a fact or question‑answer pair",
+        "text_area_label": "Enter knowledge (e.g., 'Haiti's capital is Port‑au‑Prince')",
+        "train_text_button": "Train",
+        "audio_title": "🎤 Train Me with Audio",
+        "expand_audio": "Record or upload audio + transcription",
+        "audio_upload_label": "Upload Audio File",
+        "transcribe_label": "Transcribed text:",
+        "transcription_textarea": "Type the transcription here",
+        "train_transcription_button": "Train",
+        "record_btn": "🔴 Record",
+        "stop_btn": "⏹️ Stop",
+        "download_btn": "💾 Download",
+        "image_title": "🖼️ Train Me with Images",
+        "expand_image": "Upload an image + description",
+        "image_upload_label": "Choose an image",
+        "image_description_label": "Describe this image",
+        "train_image_button": "Train",
+        "file_title": "📄 Train Me with Text Files",
+        "expand_file": "Upload .txt or .md file",
+        "file_upload_label": "Choose a text file",
+        "train_file_button": "Train",
+        "knowledge_base": "📊 Knowledge Base: {count} facts trained",
+        "clear_chat_button": "Clear Chat History",
+        "footer": "© GlobalInternet.py – Gesner AI",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – Your Personal AI",
+        "built_by": "Gesner Deslandes – Coder in Chief",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Website:",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Licensing",
+        "pricing_table": "| License | Price (one‑time) |\n|---------|------------------|\n| **Personal** | $49 |\n| **Business** | $299 |\n| **Enterprise / Source** | $999 |\n",
+        "logout_button": "🔓 Logout",
+        "no_facts_answer": "I don't know that yet. Please teach me in Training Mode!",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Trained: {text}...",
+        "warning_no_text": "Please enter some text.",
+        "warning_no_transcription": "Please enter the transcribed text first.",
+        "warning_no_description": "Please add a description.",
+        "file_preview": "File content (preview)",
+        "image_caption": "Uploaded Image",
+        "login_title": "Gesner AI",
+        "login_message": "Enter password to access Gesner AI",
+        "login_button": "Login",
+        "wrong_password": "Incorrect password.",
+        "dict_title": "📖 Dictionaries",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Word",
+        "dict_meaning": "Meaning",
+        "dict_add": "Add Entry",
+        "dict_delete": "Delete",
+        "voice_training_title": "🎙️ Voice Training (Kreyòl only)",
+        "voice_upload": "Upload voice (WAV/MP3)",
+        "voice_transcribed_text": "Text spoken in the audio (exact transcript)",
+        "voice_train": "Train voice + text",
+        "voice_success": "Voice and text stored!",
+        "translation_title": "🌍 Translate & Correct",
+        "translation_source_text": "Text to translate (any language)",
+        "translate_btn": "Translate to Kreyòl",
+        "translation_result": "Translated text (editable)",
+        "train_translation_btn": "Train with corrected text",
+        "encyclopedia_title": "📚 Encyclopedia",
+        "encyclopedia_add": "Add Encyclopedia Entry",
+        "encyclopedia_title_field": "Title",
+        "encyclopedia_content": "Content",
+        "encyclopedia_lang": "Language",
+        "encyclopedia_tags": "Tags (comma)",
+        "encyclopedia_save": "Save Entry",
+        "encyclopedia_list": "Existing Entries",
+        "voice_download": "Download Recording",
+        "test_title": "🧪 Test Training",
+        "test_question": "Ask a question to retrieve exact stored fact",
+        "test_button": "Test",
+        "test_answer_label": "Stored fact:",
+        "test_speak_button": "🔊 Speak",
+        "upload_voice_label": "Upload your voice for this exact text (Kreyòl only)",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_placeholder": "Ask me anything...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Upload voice for this answer",
+        "image_upload_label": "📷 Upload image",
+        "image_describe_button": "Describe",
+        "image_description_result": "Description:",
+        "toggle_chat_mode": "Chat Mode",
+        "phonics_title": "🔊 Phonics Training (32 Letters)",
+        "phonics_example": "Example word/sentence for letter {letter}",
+        "phonics_add": "Teach example",
+        "manage_facts": "📚 Manage Trained Facts",
+        "train_entry_button": "Train AI with this entry",
+        "trained_entry_success": "✅ Trained: {word} → {meaning}",
+        "bulk_training_title": "🚀 Bulk Training (Fast Import)",
+        "bulk_csv_label": "Upload CSV file (columns: question, answer OR one column 'fact')",
+        "bulk_json_label": "Upload JSON file (array of strings)",
+        "bulk_text_label": "Paste text (one fact per line)",
+        "bulk_import_button": "Import All Facts"
+    },
+    "fr": {
+        "training_app_title": "🧠 Gesner IA – Centre d'entraînement",
+        "training_subtitle": "Enseignez‑moi des faits, dictionnaires, encyclopédie.",
+        "chat_title": "💬 Gesner IA Chat",
+        "user_prefix": "🧑‍💻 Vous : ",
+        "assistant_prefix": "🤖 Gesner IA : ",
+        "send_button": "Envoyer",
+        "chat_input_placeholder": "Demandez‑moi n'importe quoi...",
+        "training_text_title": "📚 Entraînez‑moi (texte)",
+        "expand_text": "Ajouter un fait ou une paire Q/R",
+        "text_area_label": "Entrez la connaissance",
+        "train_text_button": "Entraîner",
+        "audio_title": "🎤 Entraînez‑moi avec audio",
+        "expand_audio": "Enregistrez ou téléchargez audio + transcription",
+        "audio_upload_label": "Fichier audio",
+        "transcribe_label": "Texte transcrit :",
+        "transcription_textarea": "Tapez la transcription",
+        "train_transcription_button": "Entraîner",
+        "record_btn": "🔴 Enregistrer",
+        "stop_btn": "⏹️ Arrêter",
+        "download_btn": "💾 Télécharger",
+        "image_title": "🖼️ Entraînez‑moi avec images",
+        "expand_image": "Image + description",
+        "image_upload_label": "Choisir une image",
+        "image_description_label": "Décrivez cette image",
+        "train_image_button": "Entraîner",
+        "file_title": "📄 Entraînez‑moi avec fichiers texte",
+        "expand_file": "Fichier .txt ou .md",
+        "file_upload_label": "Choisir un fichier",
+        "train_file_button": "Entraîner",
+        "knowledge_base": "📊 Base de connaissances : {count} faits",
+        "clear_chat_button": "Effacer l'historique",
+        "footer": "© GlobalInternet.py – Gesner IA",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner IA – Votre IA personnelle",
+        "built_by": "Gesner Deslandes – Ingénieur en chef",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Site web :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Licence",
+        "pricing_table": "| Licence | Prix (unique) |\n|---------|---------------|\n| **Personnelle** | 49 $ |\n| **Entreprise** | 299 $ |\n| **Entreprise / Code source** | 999 $ |\n",
+        "logout_button": "🔓 Déconnexion",
+        "no_facts_answer": "Je ne connais pas encore cela. Enseignez‑moi en mode Entraînement !",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Entraîné : {text}...",
+        "warning_no_text": "Veuillez saisir du texte.",
+        "warning_no_transcription": "Veuillez d'abord saisir le texte transcrit.",
+        "warning_no_description": "Veuillez ajouter une description.",
+        "file_preview": "Aperçu du fichier",
+        "image_caption": "Image téléchargée",
+        "login_title": "Gesner IA",
+        "login_message": "Entrez le mot de passe pour accéder à Gesner IA",
+        "login_button": "Se connecter",
+        "wrong_password": "Mot de passe incorrect.",
+        "dict_title": "📖 Dictionnaires",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Mot",
+        "dict_meaning": "Signification",
+        "dict_add": "Ajouter",
+        "dict_delete": "Supprimer",
+        "voice_training_title": "🎙️ Entraînement vocal (Kreyòl seulement)",
+        "voice_upload": "Télécharger voix (WAV/MP3)",
+        "voice_transcribed_text": "Texte parlé dans l'audio",
+        "voice_train": "Entraîner voix + texte",
+        "voice_success": "Voix et texte enregistrés !",
+        "translation_title": "🌍 Traduire et corriger",
+        "translation_source_text": "Texte à traduire (n'importe quelle langue)",
+        "translate_btn": "Traduire en Kreyòl",
+        "translation_result": "Texte traduit (modifiable)",
+        "train_translation_btn": "Entraîner avec ce texte",
+        "encyclopedia_title": "📚 Encyclopédie",
+        "encyclopedia_add": "Ajouter une entrée",
+        "encyclopedia_title_field": "Titre",
+        "encyclopedia_content": "Contenu",
+        "encyclopedia_lang": "Langue",
+        "encyclopedia_tags": "Étiquettes (virgules)",
+        "encyclopedia_save": "Enregistrer",
+        "encyclopedia_list": "Entrées existantes",
+        "voice_download": "Télécharger",
+        "test_title": "🧪 Tester l'entraînement",
+        "test_question": "Posez une question pour voir le fait stocké",
+        "test_button": "Tester",
+        "test_answer_label": "Fait stocké :",
+        "test_speak_button": "🔊 Lire",
+        "upload_voice_label": "Téléchargez votre voix pour ce texte exact (Kreyòl seulement)",
+        "chat_mode_title": "💬 Gesner IA Chat",
+        "chat_mode_placeholder": "Demandez‑moi n'importe quoi...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Téléchargez votre voix pour cette réponse",
+        "image_upload_label": "📷 Télécharger une image",
+        "image_describe_button": "Décrire",
+        "image_description_result": "Description :",
+        "toggle_chat_mode": "Mode Chat",
+        "phonics_title": "🔊 Entraînement phonétique (32 lettres)",
+        "phonics_example": "Exemple de mot/phrase pour la lettre {letter}",
+        "phonics_add": "Enseigner l'exemple",
+        "manage_facts": "📚 Gérer les faits appris",
+        "train_entry_button": "Entraîner l'IA avec cette entrée",
+        "trained_entry_success": "✅ Entraîné : {word} → {meaning}",
+        "bulk_training_title": "🚀 Entraînement groupé (import rapide)",
+        "bulk_csv_label": "Télécharger fichier CSV (colonnes: question, réponse OU une colonne 'fact')",
+        "bulk_json_label": "Télécharger fichier JSON (tableau de chaînes)",
+        "bulk_text_label": "Coller du texte (une ligne = un fait)",
+        "bulk_import_button": "Importer tous les faits"
+    },
+    "ht": {
+        "training_app_title": "🧠 Gesner AI – Sant Fòmasyon",
+        "training_subtitle": "Anseye m reyalite, diksyonè, ansiklopedi.",
+        "chat_title": "💬 Gesner AI Chat",
+        "user_prefix": "🧑‍💻 Ou : ",
+        "assistant_prefix": "🤖 Gesner AI : ",
+        "send_button": "Voye",
+        "chat_input_placeholder": "Pose yon kesyon...",
+        "training_text_title": "📚 Antrene m (tèks)",
+        "expand_text": "Ajoute yon reyalite oswa kesyon/repons",
+        "text_area_label": "Antre konesans lan",
+        "train_text_button": "Antrene",
+        "audio_title": "🎤 Antrene m ak odyo",
+        "expand_audio": "Anrejistre oswa chaje odyo + transkripsyon",
+        "audio_upload_label": "Chaje fichye odyo",
+        "transcribe_label": "Tèks transkri :",
+        "transcription_textarea": "Tape transkripsyon an",
+        "train_transcription_button": "Antrene",
+        "record_btn": "🔴 Anrejistre",
+        "stop_btn": "⏹️ Sispann",
+        "download_btn": "💾 Telechaje",
+        "image_title": "🖼️ Antrene m ak imaj",
+        "expand_image": "Imaj + deskripsyon",
+        "image_upload_label": "Chwazi yon imaj",
+        "image_description_label": "Dekri imaj sa a",
+        "train_image_button": "Antrene",
+        "file_title": "📄 Antrene m ak fichye tèks",
+        "expand_file": "Fichye .txt oswa .md",
+        "file_upload_label": "Chwazi yon fichye",
+        "train_file_button": "Antrene",
+        "knowledge_base": "📊 Baz konesans : {count} reyalite",
+        "clear_chat_button": "Efase listorik",
+        "footer": "© GlobalInternet.py – Gesner AI",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – AI Pèsonèl ou",
+        "built_by": "Gesner Deslandes – Enjenyè anchèf",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Sitwèb :",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Pri",
+        "pricing_table": "| Lisans | Pri (yon fwa) |\n|--------|---------------|\n| **Pèsonèl** | $49 |\n| **Biznis** | $299 |\n| **Antrepriz / Kòd sous** | $999 |\n",
+        "logout_button": "🔓 Dekonekte",
+        "no_facts_answer": "Mwen poko konnen sa. Anseye m nan Sant Fòmasyon.",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Antrene : {text}...",
+        "warning_no_text": "Tanpri antre kèk tèks.",
+        "warning_no_transcription": "Tanpri antre tèks transkri an premye.",
+        "warning_no_description": "Tanpri ajoute yon deskripsyon.",
+        "file_preview": "Aperçu fichye a",
+        "image_caption": "Imaj chaje",
+        "login_title": "Gesner AI",
+        "login_message": "Antre modpas pou konekte",
+        "login_button": "Konekte",
+        "wrong_password": "Modpas pa bon.",
+        "dict_title": "📖 Diksyonè",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Mo",
+        "dict_meaning": "Siyifikasyon",
+        "dict_add": "Ajoute",
+        "dict_delete": "Efase",
+        "voice_training_title": "🎙️ Fòmasyon vwa (Kreyòl sèlman)",
+        "voice_upload": "Chaje vwa (WAV/MP3)",
+        "voice_transcribed_text": "Tèks ki nan odyo a",
+        "voice_train": "Antrene vwa + tèks",
+        "voice_success": "Vwa ak tèks sove!",
+        "translation_title": "🌍 Tradwi epi korije",
+        "translation_source_text": "Tèks pou tradwi (nenpòt lang)",
+        "translate_btn": "Tradwi an Kreyòl",
+        "translation_result": "Tèks tradwi (kapab modifye)",
+        "train_translation_btn": "Antrene avèk tèks sa a",
+        "encyclopedia_title": "📚 Ansiklopedi",
+        "encyclopedia_add": "Ajoute yon antre",
+        "encyclopedia_title_field": "Tit",
+        "encyclopedia_content": "Kontni",
+        "encyclopedia_lang": "Lang",
+        "encyclopedia_tags": "Etikèt (vigil)",
+        "encyclopedia_save": "Sove",
+        "encyclopedia_list": "Antre ki egziste",
+        "voice_download": "Telechaje",
+        "test_title": "🧪 Tese fòmasyon",
+        "test_question": "Pose yon kesyon pou wè reyalite a",
+        "test_button": "Tese",
+        "test_answer_label": "Reyalite ki sove :",
+        "test_speak_button": "🔊 Pwononse",
+        "upload_voice_label": "Chaje vwa ou pou tèks egzak sa a (Kreyòl sèlman)",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_placeholder": "Pose yon kesyon...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Chaje vwa ou pou repons sa a",
+        "image_upload_label": "📷 Chaje yon imaj",
+        "image_describe_button": "Dekri",
+        "image_description_result": "Deskripsyon :",
+        "toggle_chat_mode": "Mòd Chat",
+        "phonics_title": "🔊 Fòmasyon Fònètik (32 Let)",
+        "phonics_example": "Egzanp mo/fraz pou let {letter}",
+        "phonics_add": "Ansègne egzanp",
+        "manage_facts": "📚 Jere Reyalite Aprann",
+        "train_entry_button": "Antrene AI ak antre sa a",
+        "trained_entry_success": "✅ Antrene : {word} → {meaning}",
+        "bulk_training_title": "🚀 Antreman an mas (enpòtasyon rapid)",
+        "bulk_csv_label": "Chaje fichye CSV (kolòn: kesyon, repons OSWA yon sèl kolòn 'fact')",
+        "bulk_json_label": "Chaje fichye JSON (tablo chèn karaktè)",
+        "bulk_text_label": "Kole tèks (yon liy = yon reyalite)",
+        "bulk_import_button": "Enpòte tout reyalite yo"
+    },
+    "es": {
+        "training_app_title": "🧠 Gesner AI – Centro de Entrenamiento",
+        "training_subtitle": "Enséñame hechos, diccionarios, enciclopedia.",
+        "chat_title": "💬 Gesner AI Chat",
+        "user_prefix": "🧑‍💻 Tú: ",
+        "assistant_prefix": "🤖 Gesner AI: ",
+        "send_button": "Enviar",
+        "chat_input_placeholder": "Pregúntame cualquier cosa...",
+        "training_text_title": "📚 Entréneme (Texto)",
+        "expand_text": "Añadir un hecho o par pregunta/respuesta",
+        "text_area_label": "Ingrese el conocimiento",
+        "train_text_button": "Entrenar",
+        "audio_title": "🎤 Entréneme con audio",
+        "expand_audio": "Grabar o subir audio + transcripción",
+        "audio_upload_label": "Subir archivo de audio",
+        "transcribe_label": "Texto transcrito:",
+        "transcription_textarea": "Escriba la transcripción",
+        "train_transcription_button": "Entrenar",
+        "record_btn": "🔴 Grabar",
+        "stop_btn": "⏹️ Detener",
+        "download_btn": "💾 Descargar",
+        "image_title": "🖼️ Entréneme con imágenes",
+        "expand_image": "Subir imagen + descripción",
+        "image_upload_label": "Elegir una imagen",
+        "image_description_label": "Describa esta imagen",
+        "train_image_button": "Entrenar",
+        "file_title": "📄 Entréneme con archivos de texto",
+        "expand_file": "Subir archivo .txt o .md",
+        "file_upload_label": "Elegir un archivo",
+        "train_file_button": "Entrenar",
+        "knowledge_base": "📊 Base de conocimiento: {count} hechos entrenados",
+        "clear_chat_button": "Borrar historial",
+        "footer": "© GlobalInternet.py – Gesner AI",
+        "sidebar_company": "GlobalInternet.py",
+        "sidebar_product": "Gesner AI – Tu IA personal",
+        "built_by": "Gesner Deslandes – Codificador Jefe",
+        "phone": "📞 (509)-47385663",
+        "email": "✉️ deslandes78@gmail.com",
+        "website_label": "🌐 Sitio web:",
+        "website_link": "https://globalinternetsitepy-abh7v6tnmskxxnuplrdcgk.streamlit.app/",
+        "pricing_title": "💰 Licencia",
+        "pricing_table": "| Licencia | Precio (único) |\n|----------|----------------|\n| **Personal** | $49 |\n| **Negocios** | $299 |\n| **Empresa / Código fuente** | $999 |\n",
+        "logout_button": "🔓 Cerrar sesión",
+        "no_facts_answer": "No sé eso todavía. ¡Enséñame en el Modo Entrenamiento!",
+        "with_facts_answer": "{context}",
+        "training_success": "✅ Entrenado: {text}...",
+        "warning_no_text": "Por favor ingrese texto.",
+        "warning_no_transcription": "Primero ingrese el texto transcrito.",
+        "warning_no_description": "Por favor añada una descripción.",
+        "file_preview": "Vista previa del archivo",
+        "image_caption": "Imagen subida",
+        "login_title": "Gesner AI",
+        "login_message": "Ingrese la contraseña para acceder a Gesner AI",
+        "login_button": "Iniciar sesión",
+        "wrong_password": "Contraseña incorrecta.",
+        "dict_title": "📖 Diccionarios",
+        "dict_ht": "Kreyòl Ayisyen",
+        "dict_fr": "Français",
+        "dict_en": "English",
+        "dict_word": "Palabra",
+        "dict_meaning": "Significado",
+        "dict_add": "Añadir entrada",
+        "dict_delete": "Eliminar",
+        "voice_training_title": "🎙️ Entrenamiento de voz (solo Kreyòl)",
+        "voice_upload": "Subir voz (WAV/MP3)",
+        "voice_transcribed_text": "Texto hablado en el audio",
+        "voice_train": "Entrenar voz + texto",
+        "voice_success": "¡Voz y texto guardados!",
+        "translation_title": "🌍 Traducir y corregir",
+        "translation_source_text": "Texto a traducir (cualquier idioma)",
+        "translate_btn": "Traducir a Kreyòl",
+        "translation_result": "Texto traducido (editable)",
+        "train_translation_btn": "Entrenar con este texto",
+        "encyclopedia_title": "📚 Enciclopedia",
+        "encyclopedia_add": "Añadir entrada",
+        "encyclopedia_title_field": "Título",
+        "encyclopedia_content": "Contenido",
+        "encyclopedia_lang": "Idioma",
+        "encyclopedia_tags": "Etiquetas (coma)",
+        "encyclopedia_save": "Guardar entrada",
+        "encyclopedia_list": "Entradas existentes",
+        "voice_download": "Descargar grabación",
+        "test_title": "🧪 Prueba de entrenamiento",
+        "test_question": "Haz una pregunta para recuperar el hecho almacenado",
+        "test_button": "Probar",
+        "test_answer_label": "Hecho almacenado:",
+        "test_speak_button": "🔊 Hablar",
+        "upload_voice_label": "Sube tu voz para este texto exacto (solo Kreyòl)",
+        "chat_mode_title": "💬 Gesner AI Chat",
+        "chat_mode_placeholder": "Pregúntame cualquier cosa...",
+        "chat_speak_button": "🔊",
+        "chat_upload_voice": "Sube tu voz para esta respuesta",
+        "image_upload_label": "📷 Subir imagen",
+        "image_describe_button": "Describir",
+        "image_description_result": "Descripción:",
+        "toggle_chat_mode": "Modo Chat",
+        "phonics_title": "🔊 Entrenamiento Fonético (32 letras)",
+        "phonics_example": "Ejemplo de palabra/frase para la letra {letter}",
+        "phonics_add": "Enseñar ejemplo",
+        "manage_facts": "📚 Gestionar hechos aprendidos",
+        "train_entry_button": "Entrenar IA con esta entrada",
+        "trained_entry_success": "✅ Entrenado: {word} → {meaning}",
+        "bulk_training_title": "🚀 Entrenamiento masivo (importación rápida)",
+        "bulk_csv_label": "Subir archivo CSV (columnas: pregunta, respuesta O una columna 'fact')",
+        "bulk_json_label": "Subir archivo JSON (arreglo de cadenas)",
+        "bulk_text_label": "Pegar texto (una línea = un hecho)",
+        "bulk_import_button": "Importar todos los hechos"
+    }
 }
 
 # ---------- SESSION STATE ----------
@@ -265,7 +685,7 @@ def apply_phonics(text):
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     
-    # Vowels (vwayèl) - handles typos like vwayel, genhen
+    # Vowels (vwayèl) - handles typos
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
     
@@ -311,9 +731,8 @@ def direct_keyword_answer(query):
     
     return None
 
-# ---------- LOGICAL REASONING (fallback) ----------
+# ---------- LOGICAL REASONING ----------
 def reason_about_question(query, lang):
-    """Attempt to answer common sense questions not in training."""
     q = query.lower().strip()
     
     # Simple math
@@ -343,10 +762,9 @@ def reason_about_question(query, lang):
         except:
             pass
     
-    # What is the capital of...?
+    # Capitals
     capital_match = re.search(r"kapital|capital|capital of|capitale de", q)
     if capital_match:
-        # Known capitals (extend as needed)
         capitals = {
             "france": "Paris",
             "ayiti": "Pòtoprens",
@@ -372,9 +790,8 @@ def reason_about_question(query, lang):
                 else:
                     return f"The capital of {country.title()} is {cap}."
     
-    # Time, date, weather (simple)
+    # Time
     if "ki lè li ye" in q or "what time" in q:
-        import datetime
         now = datetime.datetime.now().strftime("%H:%M")
         if lang == "ht":
             return f"Kounye a li {now}."
@@ -385,27 +802,22 @@ def reason_about_question(query, lang):
         else:
             return f"It is {now}."
     
-    # Default: ask to teach
     return None
 
-# ---------- INTELLIGENT RESPONSE (with thinking) ----------
+# ---------- INTELLIGENT RESPONSE ----------
 def generate_answer_from_training(query, target_lang):
-    # 1) Direct keyword matches
     direct_answer = direct_keyword_answer(query)
     if direct_answer:
         return direct_answer, False, None
     
-    # 2) Retrieve from trained facts
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
     
-    # 3) Logic reasoning (simulate thinking)
     reason_answer = reason_about_question(query, target_lang)
     if reason_answer:
         return reason_answer, False, None
     
-    # 4) Final fallback – polite request to train
     fallbacks = {
         "en": "I don't have an answer for that yet. Please teach me in the Training Center so I can answer it next time.",
         "fr": "Je n'ai pas encore de réponse. Veuillez m'enseigner dans le Centre d'entraînement.",
@@ -415,9 +827,8 @@ def generate_answer_from_training(query, target_lang):
     return fallbacks.get(target_lang, fallbacks["en"]), True, target_lang
 
 def generate_response(user_input, target_lang):
-    # Simulate "thinking" – but we can just call the function
     with st.spinner("🤔 Gesner AI ap reflechi..."):
-        time.sleep(0.5)  # tiny delay to show thinking
+        time.sleep(0.5)
         answer, is_fallback, fallback_lang = generate_answer_from_training(user_input, target_lang)
     return answer, is_fallback, fallback_lang
 
@@ -493,12 +904,514 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
         else:
             return ""
 
-# ---------- TRAINING FUNCTIONS (unchanged from previous working version) ----------
-# ... (all your existing add_to_training, update_training_item, delete_training_item,
-# load_previous_training, ensure_intro_text, character_picker, etc. must be included here)
-# To save space, I'm not repeating them – but you MUST paste them from your previous working app.
+# ---------- TRAINING FUNCTIONS ----------
+def add_to_training(text, t):
+    if not text.strip():
+        st.warning(t['warning_no_text'])
+        return False
+    embedding = st.session_state.embedding_model.encode([text])[0]
+    st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
+    if st.session_state.index is None:
+        dim = len(embedding)
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.texts = []
+    st.session_state.index.add(np.array([embedding], dtype=np.float32))
+    st.session_state.texts.append(text)
+    with open("training_data.json", "w") as f:
+        json.dump(st.session_state.training_data, f, indent=2)
+    build_tfidf()
+    st.success(t['training_success'].format(text=text[:100]))
+    return True
 
-# ---------- PUBLIC CHAT MODE (with thinking) ----------
+def update_training_item(idx, new_text, t):
+    if not new_text.strip():
+        st.warning(t['warning_no_text'])
+        return False
+    embedding = st.session_state.embedding_model.encode([new_text])[0]
+    st.session_state.training_data[idx] = {"text": new_text, "embedding": embedding.tolist()}
+    st.session_state.texts = [item["text"] for item in st.session_state.training_data]
+    if st.session_state.texts:
+        embeddings = [np.array(item["embedding"], dtype=np.float32) for item in st.session_state.training_data]
+        dim = len(embeddings[0])
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.index.add(np.array(embeddings))
+        build_tfidf()
+    else:
+        st.session_state.index = None
+        st.session_state.tfidf_vectorizer = None
+        st.session_state.tfidf_matrix = None
+    with open("training_data.json", "w") as f:
+        json.dump(st.session_state.training_data, f, indent=2)
+    st.success(f"✅ Updated: {new_text[:100]}...")
+    return True
+
+def delete_training_item(idx):
+    st.session_state.training_data.pop(idx)
+    st.session_state.texts = [item["text"] for item in st.session_state.training_data]
+    if st.session_state.texts:
+        embeddings = [np.array(item["embedding"], dtype=np.float32) for item in st.session_state.training_data]
+        dim = len(embeddings[0])
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.index.add(np.array(embeddings))
+        build_tfidf()
+    else:
+        st.session_state.index = None
+        st.session_state.tfidf_vectorizer = None
+        st.session_state.tfidf_matrix = None
+    with open("training_data.json", "w") as f:
+        json.dump(st.session_state.training_data, f, indent=2)
+    st.success(f"🗑️ Deleted")
+
+def load_previous_training():
+    if os.path.exists("training_data.json"):
+        try:
+            with open("training_data.json", "r") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                st.session_state.training_data = data
+                if data:
+                    st.session_state.texts = [item["text"] for item in data]
+                    embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
+                    dim = len(embeddings[0])
+                    st.session_state.index = faiss.IndexFlatL2(dim)
+                    st.session_state.index.add(np.array(embeddings))
+                    build_tfidf()
+        except Exception:
+            pass
+
+def ensure_intro_text():
+    intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+    if intro_text_ht not in [item["text"] for item in st.session_state.training_data]:
+        embedding = st.session_state.embedding_model.encode([intro_text_ht])[0]
+        st.session_state.training_data.append({"text": intro_text_ht, "embedding": embedding.tolist()})
+        st.session_state.texts = [intro_text_ht]
+        dim = len(embedding)
+        st.session_state.index = faiss.IndexFlatL2(dim)
+        st.session_state.index.add(np.array([embedding], dtype=np.float32))
+        build_tfidf()
+        with open("training_data.json", "w") as f:
+            json.dump(st.session_state.training_data, f, indent=2)
+
+def character_picker(key_prefix, label="Insert Kreyòl characters:"):
+    chars = [
+        "e", "è", "E", "È", "o", "ò", "O", "Ò",
+        "an", "An", "AN", "en", "En", "EN", "on", "On", "ON", "oun", "Oun", "OUN"
+    ]
+    st.markdown(f"**{label}**")
+    cols = st.columns(len(chars))
+    for i, ch in enumerate(chars):
+        with cols[i]:
+            if st.button(ch, key=f"char_{key_prefix}_{ch}"):
+                if key_prefix == "train_text":
+                    current = st.session_state.get("train_text", "")
+                    st.session_state.train_text = current + ch
+                    st.rerun()
+                elif key_prefix == "train_chat_input":
+                    current = st.session_state.get("train_chat_input", "")
+                    st.session_state.train_chat_input = current + ch
+                    st.rerun()
+                elif key_prefix == "img_desc":
+                    current = st.session_state.get("img_desc", "")
+                    st.session_state.img_desc = current + ch
+                    st.rerun()
+                elif key_prefix.startswith("edit_"):
+                    idx = key_prefix.split("_")[1]
+                    key = f"edit_text_{idx}"
+                    current = st.session_state.get(key, "")
+                    st.session_state[key] = current + ch
+                    st.rerun()
+
+# ---------- DICTIONARY MANAGER ----------
+def dictionary_manager(t):
+    st.markdown(f"## {t['dict_title']}")
+    col1, col2, col3 = st.columns(3)
+    
+    def display_dict(lang_code, lang_label, dict_data):
+        st.markdown(f"### {lang_label}")
+        w = st.text_input(f"{t['dict_word']} ({lang_code.upper()})", key=f"{lang_code}_word")
+        m = st.text_input(f"{t['dict_meaning']} ({lang_code.upper()})", key=f"{lang_code}_meaning")
+        if st.button(t['dict_add'], key=f"add_{lang_code}"):
+            if w and m:
+                dict_data[w] = m
+                save_dictionaries()
+                st.success(f"Added {w}")
+                st.rerun()
+        for word, meaning in list(dict_data.items()):
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.text(f"{word}: {meaning}")
+            with col_b:
+                if st.button(t['train_entry_button'], key=f"train_{lang_code}_{word}"):
+                    train_text = f"{word} means {meaning}"
+                    if add_to_training(train_text, t):
+                        st.success(t['trained_entry_success'].format(word=word, meaning=meaning))
+                        st.rerun()
+                if st.button(f"{t['dict_delete']}", key=f"del_{lang_code}_{word}"):
+                    del dict_data[word]
+                    save_dictionaries()
+                    st.rerun()
+    
+    with col1:
+        display_dict("ht", t['dict_ht'], st.session_state.dictionaries["ht"])
+    with col2:
+        display_dict("fr", t['dict_fr'], st.session_state.dictionaries["fr"])
+    with col3:
+        display_dict("en", t['dict_en'], st.session_state.dictionaries["en"])
+
+def save_dictionaries():
+    with open("dictionaries.json", "w") as f:
+        json.dump(st.session_state.dictionaries, f, indent=2)
+
+def save_encyclopedia():
+    with open("encyclopedia.json", "w") as f:
+        json.dump(st.session_state.encyclopedia, f, indent=2)
+
+# ---------- VOICE TRAINING ----------
+def voice_training(t):
+    st.markdown(f"## {t['voice_training_title']}")
+    st.info("🎙️ Upload your voice for Kreyòl phrases. Gesner AI will use your exact voice when answering those sentences.")
+    recorder_html = f"""
+    <div id="recorder-container">
+        <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">{t['record_btn']}</button>
+        <button id="stopBtn" disabled style="background-color:#555; border:none; border-radius:30px; padding:8px 16px;">{t['stop_btn']}</button>
+        <p id="recordingStatus"></p>
+        <audio id="audioPlayback" controls style="width:100%; margin-top:10px;"></audio>
+        <a id="downloadLink" style="display:block; margin-top:10px; color:#ffaa66;">{t['download_btn']}</a>
+    </div>
+    <script>
+        let mediaRecorder; let audioChunks = [];
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusP = document.getElementById('recordingStatus');
+        const audioPlayback = document.getElementById('audioPlayback');
+        const downloadLink = document.getElementById('downloadLink');
+        recordBtn.onclick = async () => {{
+            try {{
+                const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = () => {{
+                    const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayback.src = audioUrl;
+                    downloadLink.href = audioUrl;
+                    downloadLink.download = 'recording.wav';
+                    downloadLink.style.display = 'block';
+                    audioChunks = [];
+                    statusP.innerText = '';
+                }};
+                mediaRecorder.start();
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusP.innerText = 'Recording...';
+            }} catch (err) {{
+                statusP.innerText = 'Microphone access denied or error: ' + err.message;
+            }}
+        }};
+        stopBtn.onclick = () => {{
+            if (mediaRecorder && mediaRecorder.state === 'recording') {{
+                mediaRecorder.stop();
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                statusP.innerText = 'Stopped. Click Download to save file, then upload below.';
+            }}
+        }};
+    </script>
+    """
+    st.components.v1.html(recorder_html, height=200)
+    st.markdown(f"### 📂 {t['voice_upload']}")
+    uploaded_file = st.file_uploader(t['voice_upload'], type=["wav", "mp3"], key="voice_upload")
+    transcript = st.text_area(t['voice_transcribed_text'], key="voice_transcript")
+    if uploaded_file and transcript.strip():
+        if st.button(t['voice_train'], use_container_width=True):
+            audio_bytes = uploaded_file.read()
+            save_voice_for_text(transcript.strip(), audio_bytes)
+            add_to_training(transcript.strip(), t)
+            st.success(t['voice_success'])
+
+# ---------- TRANSLATION CORRECTION ----------
+def translation_correction(t):
+    st.markdown(f"## {t['translation_title']}")
+    source = st.text_area(t['translation_source_text'], height=100)
+    if st.button(t['translate_btn'], use_container_width=True):
+        if source.strip():
+            url = "https://api.mymemory.translated.net/get"
+            params = {"q": source, "langpair": "auto|ht"}
+            try:
+                r = requests.get(url, params=params, timeout=10)
+                res = r.json()
+                translated = res.get("responseData", {}).get("translatedText", "")
+                if translated:
+                    st.session_state.translated = translated
+                else:
+                    st.warning("Translation failed")
+            except Exception as e:
+                st.warning(f"Error: {e}")
+    if "translated" in st.session_state:
+        corrected = st.text_area(t['translation_result'], value=st.session_state.translated, height=100)
+        if st.button(t['train_translation_btn'], use_container_width=True):
+            if corrected.strip():
+                add_to_training(corrected, t)
+                st.success("Trained")
+            else:
+                st.warning(t['warning_no_text'])
+
+# ---------- ENCYCLOPEDIA MANAGER ----------
+def encyclopedia_manager(t):
+    st.markdown(f"## {t['encyclopedia_title']}")
+    with st.expander(t['encyclopedia_add']):
+        title = st.text_input(t['encyclopedia_title_field'])
+        content = st.text_area(t['encyclopedia_content'], height=150)
+        lang = st.selectbox(t['encyclopedia_lang'], ["English", "Français", "Kreyòl Ayisyen", "Español"])
+        tags = st.text_input(t['encyclopedia_tags'])
+        if st.button(t['encyclopedia_save'], use_container_width=True):
+            if title and content:
+                entry = {"title": title, "content": content, "language": lang, "tags": [t.strip() for t in tags.split(",") if t.strip()], "timestamp": time.time()}
+                st.session_state.encyclopedia.append(entry)
+                save_encyclopedia()
+                add_to_training(f"{title}: {content}", t)
+                st.success(f"Added {title}")
+                st.rerun()
+            else:
+                st.warning("Title and content required.")
+    st.markdown(f"### {t['encyclopedia_list']}")
+    for entry in st.session_state.encyclopedia[-10:]:
+        with st.expander(f"{entry['title']} ({entry['language']})"):
+            st.markdown(f"**Content:** {entry['content']}")
+            st.markdown(f"**Tags:** {', '.join(entry['tags'])}")
+            if st.button(f"Delete '{entry['title']}'", key=f"del_enc_{entry['timestamp']}"):
+                st.session_state.encyclopedia.remove(entry)
+                save_encyclopedia()
+                st.rerun()
+
+# ---------- TEST TRAINING ----------
+def test_training(t):
+    st.markdown(f"## {t['test_title']}")
+    q = st.text_input(t['test_question'])
+    if st.button(t['test_button'], use_container_width=True):
+        if q.strip():
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(q, target_lang)
+            st.session_state.test_answer = answer
+            st.session_state.test_is_fallback = is_fallback
+            st.session_state.test_fallback_lang = fallback_lang
+            st.rerun()
+    if "test_answer" in st.session_state:
+        st.markdown(f"**{t['test_answer_label']}**")
+        st.markdown(f'<div style="background:#0f3460; padding:10px; border-radius:12px;">{st.session_state.test_answer}</div>', unsafe_allow_html=True)
+        if not st.session_state.test_is_fallback:
+            voice_up = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_voice")
+            if voice_up:
+                save_voice_for_text(st.session_state.test_answer, voice_up.read())
+                st.success("Voice saved")
+                st.rerun()
+        btn_html = play_voice_button(
+            st.session_state.test_answer,
+            st.session_state.test_is_fallback,
+            st.session_state.test_fallback_lang,
+            t['test_speak_button'],
+            "test"
+        )
+        if btn_html:
+            st.components.v1.html(btn_html, height=50)
+        elif not st.session_state.test_is_fallback:
+            st.info("No voice recorded for this answer. You can upload your voice above.")
+
+# ---------- PHONICS TRAINING ----------
+def phonics_training(t):
+    st.subheader(t.get("phonics_title", "🔊 Phonics Training (32 Letters)"))
+    col1, col2 = st.columns([1,2])
+    with col1:
+        st.markdown("**32 Letters:**")
+        st.code("A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z")
+    with col2:
+        all_letters = ["A","AN","B","CH","D","E","È","EN","F","G","H","I","J","K","L","M","N","NG","O","Ò","ON","OU","OUN","P","R","S","T","UI","V","W","Y","Z"]
+        letter = st.selectbox("Choose a letter", all_letters, key="phonics_letter")
+        example = st.text_input(t.get("phonics_example", f"Example word/sentence that starts with '{letter}'"), key="phonics_example_input")
+        if st.button(t.get("phonics_add", "Teach example"), key="phonics_add_btn"):
+            if example:
+                if letter not in st.session_state.phonics:
+                    st.session_state.phonics[letter] = []
+                st.session_state.phonics[letter].append(example)
+                add_to_training(example, t)
+                st.success(f"Gesner AI learned '{example}' for letter '{letter}'")
+                st.rerun()
+    st.subheader("📚 What Gesner AI has learned about phonics")
+    if st.session_state.phonics:
+        for l, examples in st.session_state.phonics.items():
+            with st.expander(f"Letter {l}"):
+                for ex in examples:
+                    st.write(f"• {ex}")
+    else:
+        st.info("No phonics examples taught yet.")
+
+# ---------- BULK TRAINING ----------
+def bulk_training(t):
+    st.markdown(f"## {t['bulk_training_title']}")
+    st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
+    
+    def import_facts(facts):
+        count = 0
+        for fact in facts:
+            if fact.strip():
+                if add_to_training(fact.strip(), t):
+                    count += 1
+        st.success(f"Imported {count} facts.")
+    
+    # CSV
+    csv_file = st.file_uploader(t['bulk_csv_label'], type=["csv"], key="bulk_csv")
+    if csv_file:
+        try:
+            content = csv_file.read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(content))
+            facts = []
+            for row in reader:
+                if 'question' in row and 'answer' in row:
+                    facts.append(f"{row['question']} → {row['answer']}")
+                elif 'fact' in row:
+                    facts.append(row['fact'])
+                else:
+                    first_key = list(row.keys())[0]
+                    facts.append(row[first_key])
+            if facts:
+                st.info(f"Found {len(facts)} facts in CSV. Click import to add them.")
+                if st.button(t['bulk_import_button'], key="import_csv"):
+                    import_facts(facts)
+            else:
+                st.warning("No valid facts found in CSV.")
+        except Exception as e:
+            st.error(f"Error reading CSV: {e}")
+    
+    # JSON
+    json_file = st.file_uploader(t['bulk_json_label'], type=["json"], key="bulk_json")
+    if json_file:
+        try:
+            data = json.load(json_file)
+            if isinstance(data, list):
+                facts = [str(item) for item in data]
+                st.info(f"Found {len(facts)} facts in JSON. Click import to add them.")
+                if st.button(t['bulk_import_button'], key="import_json"):
+                    import_facts(facts)
+            else:
+                st.warning("JSON must be an array of strings.")
+        except Exception as e:
+            st.error(f"Error reading JSON: {e}")
+    
+    # Plain text
+    text_facts = st.text_area(t['bulk_text_label'], height=200, key="bulk_text")
+    if text_facts.strip():
+        lines = [line.strip() for line in text_facts.split('\n') if line.strip()]
+        st.info(f"Found {len(lines)} facts in text. Click import to add them.")
+        if st.button(t['bulk_import_button'], key="import_text"):
+            import_facts(lines)
+
+# ---------- TRAINING MODE ----------
+def training_mode():
+    ui_lang = st.session_state.get("ui_language", "en")
+    t = TEXTS.get(ui_lang, TEXTS["en"])
+    st.markdown(f"<h1 style='text-align:center;'>🔒 {t['training_app_title']}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
+    
+    # Chat area inside training
+    st.markdown(f"## {t['chat_title']}")
+    for msg in st.session_state.conversation_history:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="chat-message user-message">{t["user_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="chat-message assistant-message">{t["assistant_prefix"]}{msg["content"]}</div>', unsafe_allow_html=True)
+    
+    character_picker("train_chat_input", "Insert Kreyòl characters:")
+    user_input = st.text_input(t["chat_input_placeholder"], key="train_chat_input")
+    if st.button(t["send_button"], use_container_width=True):
+        if user_input.strip():
+            target_lang = st.session_state.chat_language
+            answer, is_fallback, fallback_lang = generate_response(user_input, target_lang)
+            st.session_state.conversation_history.append({"role": "user", "content": user_input})
+            st.session_state.conversation_history.append({"role": "assistant", "content": answer})
+            st.rerun()
+    
+    st.markdown("---")
+    st.markdown(f"## {t['training_text_title']}")
+    with st.expander(t["expand_text"]):
+        character_picker("train_text", "Insert Kreyòl characters for the fact:")
+        text = st.text_area(t["text_area_label"], key="train_text")
+        if st.button(t["train_text_button"], use_container_width=True):
+            add_to_training(text, t)
+    
+    st.markdown(f"## {t['audio_title']}")
+    with st.expander(t["expand_audio"]):
+        voice_training(t)
+    
+    st.markdown(f"## {t['image_title']}")
+    with st.expander(t["expand_image"]):
+        img_file = st.file_uploader(t["image_upload_label"], type=["jpg", "jpeg", "png"])
+        character_picker("img_desc", "Insert Kreyòl characters for the description:")
+        desc = st.text_area(t["image_description_label"], key="img_desc")
+        if img_file:
+            st.image(img_file, caption=t['image_caption'], width=200)
+            if st.button(t["train_image_button"], use_container_width=True):
+                if desc.strip():
+                    add_to_training(desc, t)
+                else:
+                    st.warning(t['warning_no_description'])
+    
+    st.markdown(f"## {t['file_title']}")
+    with st.expander(t["expand_file"]):
+        txt_file = st.file_uploader(t["file_upload_label"], type=["txt", "md"])
+        if txt_file:
+            content = txt_file.read().decode("utf-8")
+            st.text_area(t['file_preview'], content, height=150)
+            if st.button(t["train_file_button"], use_container_width=True):
+                add_to_training(content, t)
+    
+    st.markdown("---")
+    bulk_training(t)
+    st.markdown("---")
+    dictionary_manager(t)
+    st.markdown("---")
+    translation_correction(t)
+    st.markdown("---")
+    encyclopedia_manager(t)
+    st.markdown("---")
+    test_training(t)
+    st.markdown("---")
+    phonics_training(t)
+    st.markdown("---")
+    
+    # Manage Trained Facts
+    st.markdown(f"## {t.get('manage_facts', '📚 Manage Trained Facts')}")
+    if not st.session_state.training_data:
+        st.info("No facts trained yet. Use the training tools above.")
+    else:
+        for idx, item in enumerate(st.session_state.training_data):
+            original = item["text"]
+            with st.expander(f"Fact #{idx+1}: {original[:60]}..."):
+                character_picker(f"edit_{idx}", "Insert Kreyòl characters:")
+                new_text = st.text_area(f"Edit text", value=original, key=f"edit_text_{idx}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("✏️ Save", key=f"save_{idx}"):
+                        if new_text.strip() and new_text != original:
+                            update_training_item(idx, new_text, t)
+                            st.rerun()
+                        elif not new_text.strip():
+                            st.warning("Text cannot be empty.")
+                        else:
+                            st.info("No changes made.")
+                with col2:
+                    if st.button("🗑️ Delete", key=f"delete_{idx}"):
+                        delete_training_item(idx)
+                        st.rerun()
+                voice_exists = get_voice_for_text(original) is not None
+                st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
+    
+    st.markdown("---")
+    st.markdown(f"### {t['knowledge_base'].format(count=len(st.session_state.training_data))}")
+    if st.button(t["clear_chat_button"], use_container_width=True):
+        st.session_state.conversation_history = []
+        st.rerun()
+
+# ---------- PUBLIC CHAT MODE ----------
 def public_chat_interface():
     ui_lang = st.session_state.get("ui_language", "en")
     t = TEXTS.get(ui_lang, TEXTS["en"])
@@ -541,8 +1454,53 @@ def public_chat_interface():
         st.session_state.public_chat_messages = []
         st.rerun()
 
-# ---------- SIDEBAR (unchanged) ----------
-# ... (keep your existing show_sidebar, training_mode, etc.)
+# ---------- SIDEBAR ----------
+def show_sidebar():
+    lang_names = list(LANGUAGES.keys())
+    selected_lang_name = st.sidebar.selectbox("🌐 Language", lang_names, key="main_lang_selector")
+    selected_lang_code = LANGUAGES[selected_lang_name]
+    st.session_state.ui_language = selected_lang_code
+    st.session_state.chat_language = selected_lang_code
+    t = TEXTS.get(st.session_state.ui_language, TEXTS["en"])
+    
+    st.sidebar.markdown("""
+    <div style="text-align: center;">
+        <div style="font-size:80px; animation:spin 4s linear infinite; display:inline-block;">🌍</div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.sidebar.markdown(f"## **{t['sidebar_company']}**")
+    st.sidebar.markdown(f"### {t['sidebar_product']}")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"**{t['built_by']}**")
+    st.sidebar.markdown(t['phone'])
+    st.sidebar.markdown(t['email'])
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"{t['website_label']} [{t['website_link']}]({t['website_link']})")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"### {t['pricing_title']}")
+    st.sidebar.markdown(t['pricing_table'])
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔐 Trainer Access (API Key)")
+    if not st.session_state.training_access:
+        api_key_input = st.sidebar.text_input("Enter API Key", type="password", key="api_key_input")
+        if st.sidebar.button("Unlock Training Center"):
+            if api_key_input == REQUIRED_API_KEY:
+                st.session_state.training_access = True
+                st.sidebar.success("Access granted!")
+                st.rerun()
+            else:
+                st.sidebar.error("Invalid API Key")
+    else:
+        st.sidebar.success("✅ Training mode active")
+        if st.sidebar.button("Lock Training Center"):
+            st.session_state.training_access = False
+            st.rerun()
+    
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Reset Public Chat"):
+        st.session_state.public_chat_messages = []
+        st.rerun()
 
 # ---------- MAIN ----------
 def main():
