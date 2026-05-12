@@ -10,6 +10,7 @@ import hashlib
 import re
 import csv
 import io
+import shutil
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -637,7 +638,38 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
-# ---------- TF‑IDF RETRIEVAL (no neural model) ----------
+# ---------- RESET ALL TRAINING DATA ----------
+def reset_all_training_data():
+    # Delete JSON files
+    files_to_delete = ["training_data.json", "dictionaries.json", "encyclopedia.json"]
+    for f in files_to_delete:
+        if os.path.exists(f):
+            os.remove(f)
+    # Delete voice cache folder
+    if os.path.exists(VOICE_CACHE_DIR):
+        shutil.rmtree(VOICE_CACHE_DIR)
+        os.makedirs(VOICE_CACHE_DIR)
+    # Reset session state
+    st.session_state.training_data = []
+    st.session_state.texts = []
+    st.session_state.dictionaries = {"ht": {}, "fr": {}, "en": {}}
+    st.session_state.encyclopedia = []
+    st.session_state.phonics = {}
+    st.session_state.tfidf_vectorizer = None
+    st.session_state.tfidf_matrix = None
+    st.session_state.conversation_history = []
+    st.session_state.public_chat_messages = []
+    # Re-add intro text
+    from_str = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+    if from_str not in st.session_state.texts:
+        st.session_state.training_data.append({"text": from_str, "embedding": []})
+        st.session_state.texts.append(from_str)
+        build_tfidf()
+    st.success("All training data, dictionaries, encyclopedia, voice recordings, and chat history have been cleared. You can now start fresh.")
+    time.sleep(1)
+    st.rerun()
+
+# ---------- TF‑IDF RETRIEVAL ----------
 def build_tfidf():
     if st.session_state.texts:
         st.session_state.tfidf_vectorizer = TfidfVectorizer(stop_words=None)
@@ -658,44 +690,36 @@ def retrieve_relevant_facts(query, k=3):
 def retrieve_facts_hybrid(query, k=3):
     return retrieve_relevant_facts(query, k=k)
 
-# ---------- DIRECT KEYWORD ANSWERS (fixed for vowels) ----------
+# ---------- DIRECT KEYWORD ANSWERS ----------
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
-    # Vowels
     if re.search(r"konbyen vway[èe]l", q_lower) or "vwayel" in q_lower:
         return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
-    # Consonants
     if re.search(r"konbyen konsò?n", q_lower):
         return "Alfabè kreyòl la gen 24 konsòn."
-    # Total letters
     if re.search(r"konbyen l[eè]t", q_lower) or "konbyen let" in q_lower:
         return "Alfabè kreyòl la gen 32 lèt: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    # List letters
     if re.search(r"site tout l[eè]t|site l[eè]t|l[eè]t yo", q_lower):
         return "A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    # Identity
     identity_queries = [
         "kijan ou rele", "kiyès ou ye", "kisa ou ye",
         "ki moun ou ye", "what is your name", "who are you"
     ]
     if any(q in q_lower for q in identity_queries):
         return "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
-    # Creator
     creator_queries = [
         "kiyès ki kreye ou", "ki moun ki fè ou", "who created you",
         "ki moun ki devlope ou", "kiyès ki te kreye ou"
     ]
     if any(q in q_lower for q in creator_queries):
         return "Mwen te kreye pa Gesner Deslandes, fondatè GlobalInternet.py. Li se yon enjenyè ki renmen edike Ayiti."
-    # Greetings
     if q_lower in ["bonjou", "bonswa", "hello", "hi", "salut"]:
         return "Bonjou! Kijan ou ye? Mwen la pou reponn kesyon ou."
     return None
 
-# ---------- LOGICAL REASONING FALLBACK ----------
+# ---------- LOGIC FALLBACK ----------
 def reason_about_question(query, lang):
     q = query.lower().strip()
-    # Simple arithmetic
     math_match = re.search(r"(\d+)\s*([\+\-\*\/])\s*(\d+)", q)
     if math_match:
         try:
@@ -711,7 +735,6 @@ def reason_about_question(query, lang):
                 elif lang == "es": return f"La respuesta es {res}."
                 else: return f"The answer is {res}."
         except: pass
-    # Capitals
     if "kapital" in q or "capital" in q:
         capitals = {
             "france": "Paris",
@@ -733,7 +756,6 @@ def reason_about_question(query, lang):
                 elif lang == "fr": return f"La capitale de {country.title()} est {cap}."
                 elif lang == "es": return f"La capital de {country.title()} es {cap}."
                 else: return f"The capital of {country.title()} is {cap}."
-    # Current time
     if "ki lè li ye" in q or "what time" in q:
         import datetime
         now = datetime.datetime.now().strftime("%H:%M")
@@ -768,6 +790,7 @@ def generate_response(user_input, target_lang):
     return answer, is_fallback, fallback_lang
 
 def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
+    # Same as before (kept for brevity)
     if is_fallback:
         lang_map = {"en": "en-US", "fr": "fr-FR", "ht": "fr-FR", "es": "es-ES"}
         tts_lang = lang_map.get(fallback_audio_lang, "en-US")
@@ -965,6 +988,7 @@ def save_encyclopedia():
         json.dump(st.session_state.encyclopedia, f, indent=2)
 
 def voice_training(t):
+    # same as before – keep your existing implementation
     st.markdown(f"## {t['voice_training_title']}")
     st.info("🎙️ Upload your voice for Kreyòl phrases. Gesner AI will use your exact voice when answering those sentences.")
     recorder_html = f"""
@@ -1027,6 +1051,7 @@ def voice_training(t):
             st.success(t['voice_success'])
 
 def translation_correction(t):
+    # same as before
     st.markdown(f"## {t['translation_title']}")
     source = st.text_area(t['translation_source_text'], height=100)
     if st.button(t['translate_btn'], use_container_width=True):
@@ -1053,6 +1078,7 @@ def translation_correction(t):
                 st.warning(t['warning_no_text'])
 
 def encyclopedia_manager(t):
+    # same as before
     st.markdown(f"## {t['encyclopedia_title']}")
     with st.expander(t['encyclopedia_add']):
         title = st.text_input(t['encyclopedia_title_field'])
@@ -1080,6 +1106,7 @@ def encyclopedia_manager(t):
                 st.rerun()
 
 def test_training(t):
+    # same as before
     st.markdown(f"## {t['test_title']}")
     q = st.text_input(t['test_question'])
     if st.button(t['test_button'], use_container_width=True):
@@ -1112,6 +1139,7 @@ def test_training(t):
             st.info("No voice recorded for this answer. You can upload your voice above.")
 
 def phonics_training(t):
+    # same as before
     st.subheader(t.get("phonics_title", "🔊 Phonics Training (32 Letters)"))
     col1, col2 = st.columns([1,2])
     with col1:
@@ -1139,6 +1167,7 @@ def phonics_training(t):
         st.info("No phonics examples taught yet.")
 
 def bulk_training(t):
+    # same as before
     st.markdown(f"## {t['bulk_training_title']}")
     st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
     
@@ -1303,7 +1332,6 @@ def public_chat_interface():
     st.markdown("<h1 style='text-align:center; color:#ffd966;'>💬 Gesner AI Chat</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center;'>Select a trained question below or type your own. I will think and answer.</p>", unsafe_allow_html=True)
     
-    # Question selector (dropdown)
     if st.session_state.texts:
         options = []
         for idx, fact in enumerate(st.session_state.texts):
@@ -1316,7 +1344,6 @@ def public_chat_interface():
             st.session_state.public_chat_messages.append({"role": "assistant", "content": selected_fact, "is_fallback": False, "fallback_lang": None})
             st.rerun()
     
-    # Chat history
     for idx, msg in enumerate(st.session_state.public_chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -1335,7 +1362,6 @@ def public_chat_interface():
                 if btn_html:
                     st.components.v1.html(btn_html, height=50)
     
-    # Free text input
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
     if st.button(t["send_button"], use_container_width=True, key="public_send"):
         if user_input.strip():
@@ -1395,6 +1421,11 @@ def show_sidebar():
         if st.sidebar.button("Lock Training Center"):
             st.session_state.training_access = False
             st.rerun()
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### ⚠️ Danger Zone")
+    if st.sidebar.button("🔥 Reset All Training Data", use_container_width=True):
+        reset_all_training_data()
     
     st.sidebar.markdown("---")
     if st.sidebar.button("Reset Public Chat"):
