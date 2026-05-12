@@ -36,12 +36,19 @@ if "tfidf_vectorizer" not in st.session_state:
     st.session_state.tfidf_vectorizer = None
 if "tfidf_matrix" not in st.session_state:
     st.session_state.tfidf_matrix = None
+if "training_access" not in st.session_state:
+    st.session_state.training_access = False
 
+# ---------- API key for training (same as you defined) ----------
+REQUIRED_API_KEY = "PNL_fJC4L5QNjA0GJbc4N8TzIXBjdfIXfgcLv1yZ8Yc"
+
+# ---------- voice cache ----------
 VOICE_CACHE_DIR = "voice_cache"
 os.makedirs(VOICE_CACHE_DIR, exist_ok=True)
 
 def get_voice_filename(text):
-    h = hashlib.md5(text.strip().lower().encode()).hexdigest()
+    norm = text.strip().lower()
+    h = hashlib.md5(norm.encode()).hexdigest()
     return os.path.join(VOICE_CACHE_DIR, f"{h}.wav")
 
 def save_voice_for_text(text, audio_bytes):
@@ -55,6 +62,7 @@ def get_voice_for_text(text):
             return f.read()
     return None
 
+# ---------- TF‑IDF knowledge base ----------
 def build_tfidf():
     if st.session_state.texts:
         st.session_state.tfidf_vectorizer = TfidfVectorizer(stop_words=None)
@@ -92,6 +100,7 @@ def load_previous_training():
         except Exception:
             pass
 
+# ---------- built‑in answers ----------
 def direct_keyword_answer(query):
     q = query.lower().strip()
     if any(w in q for w in ["konbyen vwayèl", "vwayel"]):
@@ -108,7 +117,6 @@ def direct_keyword_answer(query):
 
 def reason_about_question(query):
     q = query.lower().strip()
-    # simple math
     m = re.search(r"(\d+)\s*([\+\-\*\/])\s*(\d+)", q)
     if m:
         a, op, b = int(m[1]), m[2], int(m[3])
@@ -116,7 +124,6 @@ def reason_about_question(query):
         if op == '-': return f"Repons lan se {a-b}."
         if op == '*': return f"Repons lan se {a*b}."
         if op == '/': return f"Repons lan se {a/b}."
-    # capital
     if "kapital" in q or "capital" in q:
         caps = {"france":"Paris","ayiti":"Pòtoprens","haiti":"Port‑au‑Prince","etazini":"Washington, D.C."}
         for ctry, cap in caps.items():
@@ -162,7 +169,6 @@ def play_voice_button(text, key_suffix=""):
         """
         return html
     else:
-        # fallback browser TTS
         safe_text = json.dumps(text)
         return f"""
         <button id="tts{key_suffix}" style="background:#ffaa33; border:none; border-radius:30px; padding:5px 12px;">🔊</button>
@@ -181,6 +187,7 @@ load_previous_training()
 st.markdown("<h1 style='text-align:center;'>💬 Gesner AI – Fast Chat</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>I learn from what you teach me. Ask me anything!</p>", unsafe_allow_html=True)
 
+# Chat history display
 for idx, msg in enumerate(st.session_state.conversation_history):
     if msg["role"] == "user":
         st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -201,22 +208,46 @@ if st.button("Send", use_container_width=True):
         st.session_state.conversation_history.append({"role": "assistant", "content": ans})
         st.rerun()
 
-with st.expander("📚 Teach me something new"):
-    new_fact = st.text_area("Enter a fact, sentence, or Q&A pair:")
-    voice_file = st.file_uploader("Optional: upload your voice for this text", type=["wav","mp3"])
-    if st.button("Learn this", use_container_width=True):
-        if new_fact.strip():
-            if voice_file:
-                save_voice_for_text(new_fact.strip(), voice_file.read())
-            add_to_training(new_fact.strip())
-            st.rerun()
-        else:
-            st.warning("Please enter some text.")
-
+# ---------- Training section with API key protection ----------
+st.sidebar.markdown("## 🔐 Training Access")
 with st.sidebar:
+    if not st.session_state.training_access:
+        api_key_input = st.text_input("Enter API Key to teach me", type="password")
+        if st.button("Unlock Training"):
+            if api_key_input == REQUIRED_API_KEY:
+                st.session_state.training_access = True
+                st.success("Access granted!")
+                st.rerun()
+            else:
+                st.error("Invalid API Key")
+    else:
+        st.success("Training mode active")
+        if st.button("Lock Training"):
+            st.session_state.training_access = False
+            st.rerun()
+
+if st.session_state.training_access:
+    with st.expander("📚 Teach me something new", expanded=True):
+        new_fact = st.text_area("Enter a fact, sentence, or Q&A pair:")
+        voice_file = st.file_uploader("Optional: upload your voice for this text", type=["wav","mp3"])
+        if st.button("Learn this", use_container_width=True):
+            if new_fact.strip():
+                if voice_file:
+                    save_voice_for_text(new_fact.strip(), voice_file.read())
+                add_to_training(new_fact.strip())
+                st.rerun()
+            else:
+                st.warning("Please enter some text.")
+else:
+    st.info("🔒 Training is locked. Enter the API key in the sidebar to teach me new facts.")
+
+# ---------- Sidebar utilities ----------
+with st.sidebar:
+    st.markdown("---")
     st.markdown("## 🌍 GlobalInternet.py")
     st.markdown("**Gesner Deslandes – Coder in Chief**")
     st.markdown("📞 (509)-47385663  |  ✉️ deslandes78@gmail.com")
+    st.markdown("---")
     if st.button("🗑️ Clear chat history", use_container_width=True):
         st.session_state.conversation_history = []
         st.rerun()
