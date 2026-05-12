@@ -684,20 +684,29 @@ def apply_phonics(text):
         corrected = re.sub(pattern, repl, corrected, flags=re.IGNORECASE)
     return corrected[0].upper() + corrected[1:] if corrected else ""
 
-# ---------- ENHANCED DIRECT KEYWORD ANSWERS ----------
+# ---------- ENHANCED DIRECT KEYWORD ANSWERS (with vowel count) ----------
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
-    # Alphabet questions
-    keywords = {
-        "konbyen let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
-        "32 let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
-        "alfabet kreyol": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
-        "kisa alfabè a ye": "Alfabè kreyòl la se 32 let ki reprezante tout son lang lan.",
-        "kouman pou ekri alfabet la": "Alfabè kreyòl la ekri: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
-    }
-    for key, answer in keywords.items():
-        if key in q_lower:
-            return answer
+    
+    # Alphabet letters count
+    if "konbyen let" in q_lower or "konbyen lèt" in q_lower:
+        return "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
+    
+    # Vowels count (vwayèl) - FIX APPLIED HERE
+    if re.search(r"konbyen vway[èe]l", q_lower):
+        return "Alfabè kreyòl la gen 8 vwayèl: A, E, È, I, O, Ò, OU, UI."
+    
+    # List all letters
+    if "site tout lèt" in q_lower or "site lèt" in q_lower:
+        return "A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
+    
+    # What is alphabet
+    if "kisa alfabè a ye" in q_lower:
+        return "Alfabè kreyòl la se 32 let ki reprezante tout son lang lan."
+    
+    # How to write alphabet
+    if "kouman pou ekri alfabet la" in q_lower:
+        return "Alfabè kreyòl la ekri: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z."
     
     # Identity and creator questions
     identity_queries = [
@@ -731,7 +740,7 @@ def get_fallback_message(target_lang):
     return fallbacks.get(target_lang, fallbacks["en"])
 
 def generate_answer_from_training(query, target_lang):
-    # 1) Direct keyword matches
+    # 1) Direct keyword matches (including vowel fix)
     direct_answer = direct_keyword_answer(query)
     if direct_answer:
         return direct_answer, False, None
@@ -749,7 +758,6 @@ def generate_response(user_input, target_lang):
 # ---------- IMPROVED AUDIO BUTTON (supports multiple languages) ----------
 def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
     if is_fallback:
-        # Use the fallback language (which is the user's UI language)
         lang_map = {"en": "en-US", "fr": "fr-FR", "ht": "fr-FR", "es": "es-ES"}
         tts_lang = lang_map.get(fallback_audio_lang, "en-US")
         safe_text = json.dumps(text)
@@ -776,7 +784,6 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
                     window.speechSynthesis.speak(utterance);
                 }}
                 function selectBestVoice(voices, utterance) {{
-                    // Prioritise natural voices for the target language
                     let langCode = '{tts_lang}';
                     let priorityNames = [];
                     if (langCode === 'fr-FR') priorityNames = ['Google français', 'Microsoft Hortense', 'Microsoft Denis', 'Samantha', 'Thomas'];
