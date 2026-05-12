@@ -1,6 +1,3 @@
-import os
-os.environ["TRANSFORMERS_NO_TORCHVISION"] = "1"
-
 import streamlit as st
 import json
 import numpy as np
@@ -16,7 +13,6 @@ import csv
 import io
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from duckduckgo_search import DDGS
 
 st.set_page_config(
     page_title="Gesner AI",
@@ -619,31 +615,25 @@ if "training_access" not in st.session_state:
 if "public_chat_messages" not in st.session_state:
     st.session_state.public_chat_messages = []
 
-# ---------- API KEY PROTECTION ----------
+# ---------- API KEY ----------
 REQUIRED_API_KEY = "PNL_fJC4L5QNjA0GJbc4N8TzIXBjdfIXfgcLv1yZ8Yc"
 
-# ---------- VOICE CACHE ----------
-VOICE_CACHE_DIR = "voice_cache"
-if not os.path.exists(VOICE_CACHE_DIR):
-    os.makedirs(VOICE_CACHE_DIR)
+# ---------- VOICE CACHE (in memory, no disk) ----------
+VOICE_CACHE = {}
 
 def get_voice_filename(text):
     norm = text.strip().lower()
     h = hashlib.md5(norm.encode()).hexdigest()
-    return os.path.join(VOICE_CACHE_DIR, f"{h}.wav")
+    return h
 
 def save_voice_for_text(text, audio_bytes):
-    filename = get_voice_filename(text)
-    with open(filename, "wb") as f:
-        f.write(audio_bytes)
-    return filename
+    key = get_voice_filename(text)
+    VOICE_CACHE[key] = audio_bytes
+    return key
 
 def get_voice_for_text(text):
-    filename = get_voice_filename(text)
-    if os.path.exists(filename):
-        with open(filename, "rb") as f:
-            return f.read()
-    return None
+    key = get_voice_filename(text)
+    return VOICE_CACHE.get(key)
 
 # ---------- HYBRID RETRIEVAL ----------
 def build_tfidf():
@@ -925,8 +915,6 @@ def add_to_training(text, t):
         st.session_state.texts = []
     st.session_state.index.add(np.array([embedding], dtype=np.float32))
     st.session_state.texts.append(text)
-    with open("training_data.json", "w") as f:
-        json.dump(st.session_state.training_data, f, indent=2)
     build_tfidf()
     st.success(t['training_success'].format(text=text[:100]))
     return True
@@ -948,8 +936,6 @@ def update_training_item(idx, new_text, t):
         st.session_state.index = None
         st.session_state.tfidf_vectorizer = None
         st.session_state.tfidf_matrix = None
-    with open("training_data.json", "w") as f:
-        json.dump(st.session_state.training_data, f, indent=2)
     st.success(f"✅ Updated: {new_text[:100]}...")
     return True
 
@@ -966,26 +952,11 @@ def delete_training_item(idx):
         st.session_state.index = None
         st.session_state.tfidf_vectorizer = None
         st.session_state.tfidf_matrix = None
-    with open("training_data.json", "w") as f:
-        json.dump(st.session_state.training_data, f, indent=2)
     st.success(f"🗑️ Deleted")
 
 def load_previous_training():
-    if os.path.exists("training_data.json"):
-        try:
-            with open("training_data.json", "r") as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                st.session_state.training_data = data
-                if data:
-                    st.session_state.texts = [item["text"] for item in data]
-                    embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
-                    dim = len(embeddings[0])
-                    st.session_state.index = faiss.IndexFlatL2(dim)
-                    st.session_state.index.add(np.array(embeddings))
-                    build_tfidf()
-        except Exception:
-            pass
+    # No file I/O – session state only
+    pass
 
 def ensure_intro_text():
     intro_text_ht = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
@@ -997,8 +968,6 @@ def ensure_intro_text():
         st.session_state.index = faiss.IndexFlatL2(dim)
         st.session_state.index.add(np.array([embedding], dtype=np.float32))
         build_tfidf()
-        with open("training_data.json", "w") as f:
-            json.dump(st.session_state.training_data, f, indent=2)
 
 def character_picker(key_prefix, label="Insert Kreyòl characters:"):
     chars = [
@@ -1040,7 +1009,6 @@ def dictionary_manager(t):
         if st.button(t['dict_add'], key=f"add_{lang_code}"):
             if w and m:
                 dict_data[w] = m
-                save_dictionaries()
                 st.success(f"Added {w}")
                 st.rerun()
         for word, meaning in list(dict_data.items()):
@@ -1055,7 +1023,6 @@ def dictionary_manager(t):
                         st.rerun()
                 if st.button(f"{t['dict_delete']}", key=f"del_{lang_code}_{word}"):
                     del dict_data[word]
-                    save_dictionaries()
                     st.rerun()
     
     with col1:
@@ -1066,12 +1033,12 @@ def dictionary_manager(t):
         display_dict("en", t['dict_en'], st.session_state.dictionaries["en"])
 
 def save_dictionaries():
-    with open("dictionaries.json", "w") as f:
-        json.dump(st.session_state.dictionaries, f, indent=2)
+    # No file save needed
+    pass
 
 def save_encyclopedia():
-    with open("encyclopedia.json", "w") as f:
-        json.dump(st.session_state.encyclopedia, f, indent=2)
+    # No file save needed
+    pass
 
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
@@ -1172,7 +1139,6 @@ def encyclopedia_manager(t):
             if title and content:
                 entry = {"title": title, "content": content, "language": lang, "tags": [t.strip() for t in tags.split(",") if t.strip()], "timestamp": time.time()}
                 st.session_state.encyclopedia.append(entry)
-                save_encyclopedia()
                 add_to_training(f"{title}: {content}", t)
                 st.success(f"Added {title}")
                 st.rerun()
@@ -1185,7 +1151,6 @@ def encyclopedia_manager(t):
             st.markdown(f"**Tags:** {', '.join(entry['tags'])}")
             if st.button(f"Delete '{entry['title']}'", key=f"del_enc_{entry['timestamp']}"):
                 st.session_state.encyclopedia.remove(entry)
-                save_encyclopedia()
                 st.rerun()
 
 def test_training(t):
