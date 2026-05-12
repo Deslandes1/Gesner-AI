@@ -684,7 +684,7 @@ def apply_phonics(text):
         corrected = re.sub(pattern, repl, corrected, flags=re.IGNORECASE)
     return corrected[0].upper() + corrected[1:] if corrected else ""
 
-# ---------- ENHANCED DIRECT KEYWORD ANSWERS (includes greeting) ----------
+# ---------- ENHANCED DIRECT KEYWORD ANSWERS ----------
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
     # Alphabet questions
@@ -699,27 +699,59 @@ def direct_keyword_answer(query):
         if key in q_lower:
             return answer
     
-    # Common greeting / identity questions
-    if q_lower in ["kijan ou rele?", "kijan ou rele", "kijan ou rele ?", "kiyès ou ye?", "kiyès ou ye"]:
+    # Identity and creator questions
+    identity_queries = [
+        "kijan ou rele", "kiyès ou ye", "kisa ou ye", "kijan ou rele?",
+        "ki moun ou ye", "what is your name", "who are you"
+    ]
+    if any(q in q_lower for q in identity_queries):
         return "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+    
+    creator_queries = [
+        "kiyès ki kreye ou", "ki moun ki fè ou", "who created you",
+        "ki moun ki devlope ou", "kiyès ki te kreye ou"
+    ]
+    if any(q in q_lower for q in creator_queries):
+        return "Mwen te kreye pa Gesner Deslandes, fondatè GlobalInternet.py. Li se yon enjenyè ki renmen edike Ayiti."
+    
+    # Greetings
+    if q_lower in ["bonjou", "bonswa", "hello", "hi", "salut"]:
+        return "Bonjou! Kijan ou ye? Mwen la pou reponn kesyon ou."
     
     return None
 
+# ---------- INTELLIGENT FALLBACK (in user's language) ----------
+def get_fallback_message(target_lang):
+    fallbacks = {
+        "en": "I don't have an answer for that specific question yet. If you teach me the correct answer in the Training Center, I will remember it for next time. What would you like to learn?",
+        "fr": "Je n'ai pas encore de réponse pour cette question précise. Si vous m'enseignez la bonne réponse dans le Centre d'entraînement, je m'en souviendrai la prochaine fois. Qu'aimeriez-vous apprendre ?",
+        "ht": "Mwen poko gen repons pou kesyon espesifik sa a. Si w anseye m bon repons lan nan Sant Fòmasyon, m ap sonje l pou pwochen fwa. Kisa ou ta renmen aprann?",
+        "es": "Todavía no tengo respuesta para esa pregunta específica. Si me enseñas la respuesta correcta en el Centro de Entrenamiento, la recordaré la próxima vez. ¿Qué te gustaría aprender?"
+    }
+    return fallbacks.get(target_lang, fallbacks["en"])
+
 def generate_answer_from_training(query, target_lang):
+    # 1) Direct keyword matches
     direct_answer = direct_keyword_answer(query)
     if direct_answer:
         return direct_answer, False, None
+    # 2) Retrieve from trained facts (semantic + keyword)
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
         return best_facts[0], False, None
-    french_fallback = "Je n'ai pas encore appris cela. Veuillez m'enseigner dans le Centre d'entraînement."
-    return french_fallback, True, "fr"
+    # 3) Smart fallback in the user's language
+    fallback_msg = get_fallback_message(target_lang)
+    return fallback_msg, True, target_lang
 
 def generate_response(user_input, target_lang):
     return generate_answer_from_training(user_input, target_lang)
 
+# ---------- IMPROVED AUDIO BUTTON (supports multiple languages) ----------
 def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊", key_suffix=""):
     if is_fallback:
+        # Use the fallback language (which is the user's UI language)
+        lang_map = {"en": "en-US", "fr": "fr-FR", "ht": "fr-FR", "es": "es-ES"}
+        tts_lang = lang_map.get(fallback_audio_lang, "en-US")
         safe_text = json.dumps(text)
         html = f"""
         <button class="speak-btn" id="ttsBtn_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">{button_label}</button>
@@ -727,33 +759,38 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
             (function() {{
                 const btn = document.getElementById('ttsBtn_{key_suffix}');
                 let utterance = null;
-                function speakWithFrenchVoice() {{
+                function speakWithVoice() {{
                     if (utterance) window.speechSynthesis.cancel();
                     utterance = new SpeechSynthesisUtterance({safe_text});
-                    utterance.lang = 'fr-FR';
+                    utterance.lang = '{tts_lang}';
                     let voices = window.speechSynthesis.getVoices();
                     if (voices.length === 0) {{
                         window.speechSynthesis.onvoiceschanged = function() {{
                             voices = window.speechSynthesis.getVoices();
-                            selectFrenchVoice(voices, utterance);
+                            selectBestVoice(voices, utterance);
                             window.speechSynthesis.speak(utterance);
                         }};
                         return;
                     }}
-                    selectFrenchVoice(voices, utterance);
+                    selectBestVoice(voices, utterance);
                     window.speechSynthesis.speak(utterance);
                 }}
-                function selectFrenchVoice(voices, utterance) {{
-                    const priorityNames = ['Google français', 'Microsoft Hortense', 'Microsoft Denis', 'Samantha', 'Thomas', 'Google 프랑스어'];
+                function selectBestVoice(voices, utterance) {{
+                    // Prioritise natural voices for the target language
+                    let langCode = '{tts_lang}';
+                    let priorityNames = [];
+                    if (langCode === 'fr-FR') priorityNames = ['Google français', 'Microsoft Hortense', 'Microsoft Denis', 'Samantha', 'Thomas'];
+                    if (langCode === 'en-US') priorityNames = ['Google US English', 'Microsoft David', 'Microsoft Zira', 'Samantha'];
+                    if (langCode === 'es-ES') priorityNames = ['Google español', 'Microsoft Helena', 'Microsoft Pablo', 'Monica'];
                     let selected = null;
                     for (let name of priorityNames) {{
-                        selected = voices.find(v => v.lang === 'fr-FR' && v.name.includes(name));
+                        selected = voices.find(v => v.lang === langCode && v.name.includes(name));
                         if (selected) break;
                     }}
-                    if (!selected) selected = voices.find(v => v.lang === 'fr-FR');
+                    if (!selected) selected = voices.find(v => v.lang === langCode);
                     if (selected) utterance.voice = selected;
                 }}
-                btn.onclick = speakWithFrenchVoice;
+                btn.onclick = speakWithVoice;
             }})();
         </script>
         """
