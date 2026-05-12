@@ -684,8 +684,10 @@ def apply_phonics(text):
         corrected = re.sub(pattern, repl, corrected, flags=re.IGNORECASE)
     return corrected[0].upper() + corrected[1:] if corrected else ""
 
+# ---------- ENHANCED DIRECT KEYWORD ANSWERS (includes greeting) ----------
 def direct_keyword_answer(query):
     q_lower = query.lower().strip()
+    # Alphabet questions
     keywords = {
         "konbyen let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
         "32 let": "Alfabè kreyòl la gen 32 let: A, AN, B, CH, D, E, È, EN, F, G, H, I, J, K, L, M, N, NG, O, Ò, ON, OU, OUN, P, R, S, T, UI, V, W, Y, Z.",
@@ -696,11 +698,16 @@ def direct_keyword_answer(query):
     for key, answer in keywords.items():
         if key in q_lower:
             return answer
+    
+    # Common greeting / identity questions
+    if q_lower in ["kijan ou rele?", "kijan ou rele", "kijan ou rele ?", "kiyès ou ye?", "kiyès ou ye"]:
+        return "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
+    
     return None
 
 def generate_answer_from_training(query, target_lang):
     direct_answer = direct_keyword_answer(query)
-    if direct_answer and target_lang == "ht":
+    if direct_answer:
         return direct_answer, False, None
     best_facts = retrieve_facts_hybrid(query, k=3)
     if best_facts:
