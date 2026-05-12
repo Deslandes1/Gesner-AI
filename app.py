@@ -16,7 +16,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="Gesner AI", page_icon="🧠", layout="wide")
 
-# ---------- CSS (dark theme - same as before) ----------
+# ---------- CSS (dark theme) ----------
 st.markdown(
     """
     <style>
@@ -137,8 +137,9 @@ LANGUAGES = {
     "Español": "es"
 }
 
-# ================= FULL TEXTS DICTIONARY (keep your full version) =================
-# For brevity, only 'en' is shown here. Replace with your complete TEXTS from original.
+# ================= TEXTS DICTIONARY (multilingual) =================
+# IMPORTANT: Replace this TEXTS dictionary with your full multilingual version from your original app.
+# For brevity, only English keys are shown here. You must copy your complete TEXTS from your original file.
 TEXTS = {
     "en": {
         "training_app_title": "🧠 Gesner AI – Training Center",
@@ -245,10 +246,9 @@ TEXTS = {
         "bulk_text_label": "Paste text (one fact per line)",
         "bulk_import_button": "Import All Facts"
     },
-    # You must add your full TEXTS for fr, ht, es from your original file.
-    # For brevity, only 'en' is shown here.
+    # ADD YOUR FR, HT, ES TEXTS HERE (copy from your original app.py)
 }
-# IMPORTANT: Replace the TEXTS dictionary above with your complete multilingual version.
+# ---------- REPLACE THE ABOVE TEXTS DICTIONARY WITH YOUR FULL VERSION ----------
 
 # ---------- SESSION STATE ----------
 if "training_data" not in st.session_state:
@@ -384,7 +384,7 @@ def reason_about_question(query, lang):
         else: return f"It is {now}."
     return None
 
-# ---------- GENERATE ANSWER (no embedding) ----------
+# ---------- GENERATE ANSWER ----------
 def generate_answer_from_training(query, target_lang):
     direct = direct_keyword_answer(query)
     if direct:
@@ -481,7 +481,7 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
         else:
             return ""
 
-# ---------- TRAINING FUNCTIONS (no embedding) ----------
+# ---------- TRAINING FUNCTIONS ----------
 def add_to_training(text, t):
     if not text.strip():
         st.warning(t['warning_no_text'])
@@ -572,7 +572,7 @@ def character_picker(key_prefix, label="Insert Kreyòl characters:"):
                     st.session_state[key] = current + ch
                     st.rerun()
 
-# ---------- DICTIONARY MANAGER (unchanged from your original) ----------
+# ---------- DICTIONARY MANAGER ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -619,7 +619,7 @@ def save_encyclopedia():
 
 def voice_training(t):
     st.markdown(f"## {t['voice_training_title']}")
-    st.info("🎙️ Upload your voice for Kreyòl phrases.")
+    st.info("🎙️ Upload your voice for Kreyòl phrases. Gesner AI will use your exact voice when answering those sentences.")
     recorder_html = f"""
     <div id="recorder-container">
         <button id="recordBtn" style="background-color:#e94560; border:none; border-radius:30px; padding:8px 16px; color:white;">{t['record_btn']}</button>
@@ -793,7 +793,7 @@ def phonics_training(t):
 
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
-    st.info("Import many facts at once.")
+    st.info("Import many facts at once. Each fact will be added to the knowledge base and can be edited later.")
     
     def import_facts(facts):
         count = 0
@@ -853,7 +853,6 @@ def training_mode():
     st.markdown(f"<h1 style='text-align:center;'>🔒 {t['training_app_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align:center;'>{t['training_subtitle']}</p>", unsafe_allow_html=True)
     
-    # Chat inside training
     st.markdown(f"## {t['chat_title']}")
     for msg in st.session_state.conversation_history:
         if msg["role"] == "user":
@@ -959,7 +958,6 @@ def public_chat_interface():
     
     # --- NO DROPDOWN (questionary removed) ---
     
-    # Chat history
     for idx, msg in enumerate(st.session_state.public_chat_messages):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -978,7 +976,6 @@ def public_chat_interface():
                 if btn_html:
                     st.components.v1.html(btn_html, height=50)
     
-    # Free text input
     user_input = st.text_input(t["chat_input_placeholder"], key="public_chat_input")
     if st.button(t["send_button"], use_container_width=True, key="public_send"):
         if user_input.strip():
