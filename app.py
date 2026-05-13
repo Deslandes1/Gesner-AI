@@ -195,7 +195,8 @@ TEXTS = {
         "voice_upload": "Upload voice (WAV/MP3)",
         "voice_transcribed_text": "Text spoken in the audio (exact transcript)",
         "voice_train": "Train voice + text",
-        "voice_success": "Voice and text stored! Fact: '{fact}'",
+        "voice_success": "✅ Voice and text stored! Fact: '{fact}'",
+        "test_this_fact": "🎧 Test this fact now",
         "record_btn": "🔴 Record",
         "stop_btn": "⏹️ Stop",
         "download_btn": "💾 Download",
@@ -253,7 +254,8 @@ TEXTS = {
         "voice_upload": "Télécharger voix (WAV/MP3)",
         "voice_transcribed_text": "Texte parlé dans l'audio",
         "voice_train": "Entraîner voix + texte",
-        "voice_success": "Voix et texte enregistrés ! Fait : '{fact}'",
+        "voice_success": "✅ Voix et texte enregistrés ! Fait : '{fact}'",
+        "test_this_fact": "🎧 Tester ce fait maintenant",
         "record_btn": "🔴 Enregistrer",
         "stop_btn": "⏹️ Arrêter",
         "download_btn": "💾 Télécharger",
@@ -311,7 +313,8 @@ TEXTS = {
         "voice_upload": "Chaje vwa (WAV/MP3)",
         "voice_transcribed_text": "Tèks ki nan odyo a",
         "voice_train": "Antrene vwa + tèks",
-        "voice_success": "Vwa ak tèks sove! Fè: '{fact}'",
+        "voice_success": "✅ Vwa ak tèks sove! Fè: '{fact}'",
+        "test_this_fact": "🎧 Tès fè sa kounye a",
         "record_btn": "🔴 Anrejistre",
         "stop_btn": "⏹️ Sispann",
         "download_btn": "💾 Telechaje",
@@ -369,7 +372,8 @@ TEXTS = {
         "voice_upload": "Subir voz (WAV/MP3)",
         "voice_transcribed_text": "Texto hablado en el audio",
         "voice_train": "Entrenar voz + texto",
-        "voice_success": "¡Voz y texto guardados! Hecho: '{fact}'",
+        "voice_success": "✅ ¡Voz y texto guardados! Hecho: '{fact}'",
+        "test_this_fact": "🎧 Probar este hecho ahora",
         "record_btn": "🔴 Grabar",
         "stop_btn": "⏹️ Detener",
         "download_btn": "💾 Descargar",
@@ -430,7 +434,6 @@ def rebuild_index():
 def add_to_training(text):
     if not text.strip():
         return False
-    # Avoid duplicates? Allow anyway.
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     rebuild_index()
@@ -735,6 +738,14 @@ def voice_training(t):
             save_voice_for_text(fact_text, audio_bytes)
             add_to_training(fact_text)
             st.success(t['voice_success'].format(fact=fact_text))
+            # Immediately show a test button for this fact
+            st.markdown("---")
+            st.markdown(f"### {t['test_this_fact']}")
+            st.write(f"**Fact:** {fact_text}")
+            btn_html = play_voice_button(fact_text, False, None, t['play_voice'], "after_train")
+            if btn_html:
+                st.components.v1.html(btn_html, height=50)
+            st.info("💡 You can now test this fact by typing a query like the fact text above in the **Test Training** section, or use the button above.")
 
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
