@@ -172,6 +172,12 @@ TEXTS = {
         "unlock_training": "🔐 Unlock Training Center",
         "api_key_label": "Enter API Key",
         "training_section": "🔧 Training Center",
+        "test_training_section": "🧪 Test Training",
+        "test_query_label": "Enter a query to test fact retrieval",
+        "test_button": "Test Retrieval",
+        "closest_fact": "Closest fact:",
+        "no_fact": "No matching fact found.",
+        "play_voice": "Play Voice",
         "dict_title": "📖 Dictionaries",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -198,6 +204,7 @@ TEXTS = {
         "manage_facts": "📚 Manage Trained Facts",
         "edit_save": "✏️ Save",
         "delete": "🗑️ Delete",
+        "test_voice_btn": "🔊 Test Voice",
         "footer": "© GlobalInternet.py – Gesner AI | Public chat always free, training protected by API key"
     },
     "fr": {
@@ -217,6 +224,12 @@ TEXTS = {
         "unlock_training": "🔐 Déverrouiller le centre d'entraînement",
         "api_key_label": "Entrez la clé API",
         "training_section": "🔧 Centre d'entraînement",
+        "test_training_section": "🧪 Tester l'entraînement",
+        "test_query_label": "Entrez une requête pour tester la recherche",
+        "test_button": "Tester",
+        "closest_fact": "Fait le plus proche :",
+        "no_fact": "Aucun fait correspondant.",
+        "play_voice": "Écouter la voix",
         "dict_title": "📖 Dictionnaires",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -243,6 +256,7 @@ TEXTS = {
         "manage_facts": "📚 Gérer les faits appris",
         "edit_save": "✏️ Enregistrer",
         "delete": "🗑️ Supprimer",
+        "test_voice_btn": "🔊 Tester la voix",
         "footer": "© GlobalInternet.py – Gesner IA | Chat public toujours gratuit, entraînement protégé par clé API"
     },
     "ht": {
@@ -262,6 +276,12 @@ TEXTS = {
         "unlock_training": "🔐 Débloke sant fòmasyon",
         "api_key_label": "Antre kle API",
         "training_section": "🔧 Sant Fòmasyon",
+        "test_training_section": "🧪 Tès Fòmasyon",
+        "test_query_label": "Antre yon kesyon pou teste rekiperasyon",
+        "test_button": "Tès",
+        "closest_fact": "Fè ki pi pre:",
+        "no_fact": "Pa gen fè ki matche.",
+        "play_voice": "Jwe vwa",
         "dict_title": "📖 Diksyonè",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -288,6 +308,7 @@ TEXTS = {
         "manage_facts": "📚 Jere Reyalite Aprann",
         "edit_save": "✏️ Sove",
         "delete": "🗑️ Efase",
+        "test_voice_btn": "🔊 Tès Vwa",
         "footer": "© GlobalInternet.py – Gesner AI | Chat piblik tou gratis, fòmasyon pwoteje pa kle API"
     },
     "es": {
@@ -307,6 +328,12 @@ TEXTS = {
         "unlock_training": "🔐 Desbloquear centro de entrenamiento",
         "api_key_label": "Ingrese la clave API",
         "training_section": "🔧 Centro de Entrenamiento",
+        "test_training_section": "🧪 Probar Entrenamiento",
+        "test_query_label": "Ingrese una consulta para probar la recuperación",
+        "test_button": "Probar",
+        "closest_fact": "Hecho más cercano:",
+        "no_fact": "No se encontró ningún hecho.",
+        "play_voice": "Reproducir voz",
         "dict_title": "📖 Diccionarios",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -333,6 +360,7 @@ TEXTS = {
         "manage_facts": "📚 Gestionar hechos aprendidos",
         "edit_save": "✏️ Guardar",
         "delete": "🗑️ Eliminar",
+        "test_voice_btn": "🔊 Probar voz",
         "footer": "© GlobalInternet.py – Gesner AI | Chat público siempre gratuito, entrenamiento protegido por clave API"
     }
 }
@@ -745,7 +773,7 @@ def manage_trained_facts(t):
             with st.expander(f"Fact #{idx+1}: {original[:60]}..."):
                 character_picker(f"edit_{idx}", "Insert Kreyòl characters for this fact:")
                 new_text = st.text_area("Edit text", value=original, key=f"edit_text_{idx}", height=100)
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns([2,2,1])
                 with col1:
                     if st.button(t['edit_save'], key=f"save_{idx}"):
                         if new_text.strip() and new_text != original:
@@ -761,8 +789,33 @@ def manage_trained_facts(t):
                         delete_training_item(idx)
                         st.success("Deleted")
                         st.rerun()
+                with col3:
+                    # Test voice button for this fact
+                    btn_html = play_voice_button(original, False, None, t['test_voice_btn'], f"test_{idx}")
+                    if btn_html:
+                        st.components.v1.html(btn_html, height=50)
                 voice_exists = get_voice_for_text(original) is not None
                 st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
+
+def test_training_section(t):
+    st.markdown(f"## {t['test_training_section']}")
+    st.info("Enter a query to see which fact the AI would retrieve, and play its voice.")
+    test_query = st.text_input(t['test_query_label'], key="test_query_input")
+    if st.button(t['test_button'], key="run_test"):
+        if test_query.strip():
+            # Use the same hybrid retrieval as chat
+            facts = retrieve_facts_hybrid(test_query, k=1)
+            if facts:
+                best_fact = facts[0]
+                st.success(f"{t['closest_fact']} {best_fact}")
+                # Provide a button to play the voice for that fact
+                btn_html = play_voice_button(best_fact, False, None, t['play_voice'], "test_retrieval")
+                if btn_html:
+                    st.components.v1.html(btn_html, height=50)
+            else:
+                st.warning(t['no_fact'])
+        else:
+            st.warning("Please enter a query.")
 
 def training_center(t):
     st.markdown(f"<h1 style='text-align:center;'>🔧 {t['training_section']}</h1>", unsafe_allow_html=True)
@@ -771,6 +824,8 @@ def training_center(t):
     voice_training(t)
     st.markdown("---")
     bulk_training(t)
+    st.markdown("---")
+    test_training_section(t)   # <-- new test section
     st.markdown("---")
     manage_trained_facts(t)
 
