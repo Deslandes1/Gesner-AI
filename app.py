@@ -7,7 +7,6 @@ import time
 import hashlib
 import re
 import base64
-import requests
 import csv
 import io
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -177,9 +176,10 @@ TEXTS = {
         "no_fact": "No matching fact found.",
         "play_voice": "Play Voice",
         "voice_exists": "✅ Voice file attached",
-        "voice_missing": "❌ No voice attached to this fact. Use 'Upload Voice' below.",
-        "upload_voice_label": "Upload voice for this fact (WAV/MP3)",
-        "attach_voice_button": "Attach Voice to Fact",
+        "voice_missing": "❌ No voice attached to this fact.",
+        "attach_voice_here": "Attach voice to this fact now:",
+        "upload_voice_label": "Upload voice (WAV/MP3)",
+        "attach_voice_button": "Attach Voice to this Fact",
         "voice_attached_success": "Voice attached successfully!",
         "dict_title": "📖 Dictionaries",
         "dict_ht": "Kreyòl Ayisyen",
@@ -195,7 +195,7 @@ TEXTS = {
         "voice_upload": "Upload voice (WAV/MP3)",
         "voice_transcribed_text": "Text spoken in the audio (exact transcript)",
         "voice_train": "Train voice + text",
-        "voice_success": "Voice and text stored!",
+        "voice_success": "Voice and text stored! Fact: '{fact}'",
         "record_btn": "🔴 Record",
         "stop_btn": "⏹️ Stop",
         "download_btn": "💾 Download",
@@ -234,9 +234,10 @@ TEXTS = {
         "no_fact": "Aucun fait correspondant.",
         "play_voice": "Écouter la voix",
         "voice_exists": "✅ Voix attachée",
-        "voice_missing": "❌ Aucune voix attachée à ce fait. Utilisez 'Télécharger voix' ci-dessous.",
-        "upload_voice_label": "Télécharger une voix pour ce fait (WAV/MP3)",
-        "attach_voice_button": "Attacher la voix au fait",
+        "voice_missing": "❌ Aucune voix attachée à ce fait.",
+        "attach_voice_here": "Attacher une voix à ce fait maintenant :",
+        "upload_voice_label": "Télécharger la voix (WAV/MP3)",
+        "attach_voice_button": "Attacher la voix à ce fait",
         "voice_attached_success": "Voix attachée avec succès !",
         "dict_title": "📖 Dictionnaires",
         "dict_ht": "Kreyòl Ayisyen",
@@ -252,7 +253,7 @@ TEXTS = {
         "voice_upload": "Télécharger voix (WAV/MP3)",
         "voice_transcribed_text": "Texte parlé dans l'audio",
         "voice_train": "Entraîner voix + texte",
-        "voice_success": "Voix et texte enregistrés !",
+        "voice_success": "Voix et texte enregistrés ! Fait : '{fact}'",
         "record_btn": "🔴 Enregistrer",
         "stop_btn": "⏹️ Arrêter",
         "download_btn": "💾 Télécharger",
@@ -291,9 +292,10 @@ TEXTS = {
         "no_fact": "Pa gen fè ki matche.",
         "play_voice": "Jwe vwa",
         "voice_exists": "✅ Vwa atache",
-        "voice_missing": "❌ Pa gen vwa atache ak fè sa. Sèvi ak 'Chaje vwa' anba a.",
-        "upload_voice_label": "Chaje vwa pou fè sa (WAV/MP3)",
-        "attach_voice_button": "Atache vwa ak fè",
+        "voice_missing": "❌ Pa gen vwa atache ak fè sa.",
+        "attach_voice_here": "Atache vwa ak fè sa kounye a:",
+        "upload_voice_label": "Chaje vwa (WAV/MP3)",
+        "attach_voice_button": "Atache vwa ak fè sa",
         "voice_attached_success": "Vwa atache avèk siksè!",
         "dict_title": "📖 Diksyonè",
         "dict_ht": "Kreyòl Ayisyen",
@@ -309,7 +311,7 @@ TEXTS = {
         "voice_upload": "Chaje vwa (WAV/MP3)",
         "voice_transcribed_text": "Tèks ki nan odyo a",
         "voice_train": "Antrene vwa + tèks",
-        "voice_success": "Vwa ak tèks sove!",
+        "voice_success": "Vwa ak tèks sove! Fè: '{fact}'",
         "record_btn": "🔴 Anrejistre",
         "stop_btn": "⏹️ Sispann",
         "download_btn": "💾 Telechaje",
@@ -348,9 +350,10 @@ TEXTS = {
         "no_fact": "No se encontró ningún hecho.",
         "play_voice": "Reproducir voz",
         "voice_exists": "✅ Voz adjunta",
-        "voice_missing": "❌ No hay voz adjunta a este hecho. Use 'Subir voz' abajo.",
-        "upload_voice_label": "Subir voz para este hecho (WAV/MP3)",
-        "attach_voice_button": "Adjuntar voz al hecho",
+        "voice_missing": "❌ No hay voz adjunta a este hecho.",
+        "attach_voice_here": "Adjuntar voz a este hecho ahora:",
+        "upload_voice_label": "Subir voz (WAV/MP3)",
+        "attach_voice_button": "Adjuntar voz a este hecho",
         "voice_attached_success": "¡Voz adjuntada con éxito!",
         "dict_title": "📖 Diccionarios",
         "dict_ht": "Kreyòl Ayisyen",
@@ -366,7 +369,7 @@ TEXTS = {
         "voice_upload": "Subir voz (WAV/MP3)",
         "voice_transcribed_text": "Texto hablado en el audio",
         "voice_train": "Entrenar voz + texto",
-        "voice_success": "¡Voz y texto guardados!",
+        "voice_success": "¡Voz y texto guardados! Hecho: '{fact}'",
         "record_btn": "🔴 Grabar",
         "stop_btn": "⏹️ Detener",
         "download_btn": "💾 Descargar",
@@ -427,6 +430,7 @@ def rebuild_index():
 def add_to_training(text):
     if not text.strip():
         return False
+    # Avoid duplicates? Allow anyway.
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     rebuild_index()
@@ -437,8 +441,6 @@ def update_training_item(idx, new_text):
         return False
     embedding = st.session_state.embedding_model.encode([new_text])[0]
     st.session_state.training_data[idx] = {"text": new_text, "embedding": embedding.tolist()}
-    # If text changed, voice is no longer valid (we keep old voice under old key, but better to not copy)
-    # We'll keep it; user can re-upload voice if needed.
     rebuild_index()
     return True
 
@@ -465,6 +467,8 @@ def save_voice_for_text(text, audio_bytes):
     return key
 
 def get_voice_for_text(text):
+    if not text:
+        return None
     key = get_voice_filename(text)
     return VOICE_CACHE.get(key)
 
@@ -727,9 +731,10 @@ def voice_training(t):
     if uploaded_file and transcript.strip():
         if st.button(t['voice_train'], use_container_width=True):
             audio_bytes = uploaded_file.read()
-            save_voice_for_text(transcript.strip(), audio_bytes)
-            add_to_training(transcript.strip())
-            st.success(t['voice_success'])
+            fact_text = transcript.strip()
+            save_voice_for_text(fact_text, audio_bytes)
+            add_to_training(fact_text)
+            st.success(t['voice_success'].format(fact=fact_text))
 
 def bulk_training(t):
     st.markdown(f"## {t['bulk_training_title']}")
@@ -816,7 +821,6 @@ def manage_trained_facts(t):
                 voice_exists = get_voice_for_text(original) is not None
                 st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
                 
-                # New: Upload voice for this fact
                 st.markdown("---")
                 st.markdown(f"### {t['upload_voice_label']}")
                 voice_file = st.file_uploader(f"Upload for fact #{idx+1}", type=["wav", "mp3"], key=f"attach_voice_{idx}")
@@ -836,7 +840,7 @@ def test_training_section(t):
             facts = retrieve_facts_hybrid(test_query, k=1)
             if facts:
                 best_fact = facts[0]
-                st.success(f"{t['closest_fact']} {best_fact}")
+                st.success(f"{t['closest_fact']} \"{best_fact}\"")
                 voice_bytes = get_voice_for_text(best_fact)
                 if voice_bytes:
                     st.markdown(f"✅ {t['voice_exists']}")
@@ -845,6 +849,14 @@ def test_training_section(t):
                         st.components.v1.html(btn_html, height=50)
                 else:
                     st.warning(t['voice_missing'])
+                    st.markdown(f"### {t['attach_voice_here']}")
+                    attach_file = st.file_uploader(t['upload_voice_label'], type=["wav", "mp3"], key="test_attach_voice")
+                    if attach_file:
+                        if st.button(t['attach_voice_button'], key="test_attach_btn"):
+                            audio_bytes = attach_file.read()
+                            save_voice_for_text(best_fact, audio_bytes)
+                            st.success(t['voice_attached_success'])
+                            st.rerun()
             else:
                 st.warning(t['no_fact'])
         else:
