@@ -9,10 +9,58 @@ import re
 import base64
 import csv
 import io
+import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
 
+# ---------- PERSISTENCE ----------
+DATA_DIR = ".gesner_data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+TRAINING_FILE = os.path.join(DATA_DIR, "training_data.json")
+DICT_FILE = os.path.join(DATA_DIR, "dictionaries.json")
+VOICE_FILE = os.path.join(DATA_DIR, "voice_cache.json")
+
+def save_training_data():
+    with open(TRAINING_FILE, "w", encoding="utf-8") as f:
+        json.dump(st.session_state.training_data, f, ensure_ascii=False, indent=2)
+
+def load_training_data():
+    if os.path.exists(TRAINING_FILE):
+        with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_dictionaries():
+    with open(DICT_FILE, "w", encoding="utf-8") as f:
+        json.dump(st.session_state.dictionaries, f, ensure_ascii=False, indent=2)
+
+def load_dictionaries():
+    if os.path.exists(DICT_FILE):
+        with open(DICT_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"ht": {}, "fr": {}, "en": {}}
+
+def save_voice_cache():
+    # Convert bytes to base64 for JSON serialization
+    serializable = {}
+    for key, audio_bytes in VOICE_CACHE.items():
+        serializable[key] = base64.b64encode(audio_bytes).decode("utf-8")
+    with open(VOICE_FILE, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, ensure_ascii=False)
+
+def load_voice_cache():
+    if os.path.exists(VOICE_FILE):
+        with open(VOICE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        cache = {}
+        for key, b64 in data.items():
+            cache[key] = base64.b64decode(b64)
+        return cache
+    return {}
+
+# ---------- Page config ----------
 st.set_page_config(
     page_title="Gesner AI",
     page_icon="🧠",
@@ -399,9 +447,10 @@ if "embedding_model" not in st.session_state:
     st.session_state.index = None
     st.session_state.texts = []
 if "training_data" not in st.session_state:
-    st.session_state.training_data = []
+    # Load from disk
+    st.session_state.training_data = load_training_data()
 if "dictionaries" not in st.session_state:
-    st.session_state.dictionaries = {"ht": {}, "fr": {}, "en": {}}
+    st.session_state.dictionaries = load_dictionaries()
 if "training_access" not in st.session_state:
     st.session_state.training_access = False
 if "chat_language" not in st.session_state:
@@ -410,6 +459,14 @@ if "tfidf_vectorizer" not in st.session_state:
     st.session_state.tfidf_vectorizer = None
 if "tfidf_matrix" not in st.session_state:
     st.session_state.tfidf_matrix = None
+
+# ---------- VOICE CACHE (global variable, loaded once) ----------
+VOICE_CACHE = load_voice_cache()
+
+def save_all():
+    save_training_data()
+    save_dictionaries()
+    save_voice_cache()
 
 # ---------- HELPER FUNCTIONS ----------
 def build_tfidf():
@@ -437,6 +494,7 @@ def add_to_training(text):
     embedding = st.session_state.embedding_model.encode([text])[0]
     st.session_state.training_data.append({"text": text, "embedding": embedding.tolist()})
     rebuild_index()
+    save_training_data()
     return True
 
 def update_training_item(idx, new_text):
@@ -445,19 +503,18 @@ def update_training_item(idx, new_text):
     embedding = st.session_state.embedding_model.encode([new_text])[0]
     st.session_state.training_data[idx] = {"text": new_text, "embedding": embedding.tolist()}
     rebuild_index()
+    save_training_data()
     return True
 
 def delete_training_item(idx):
     st.session_state.training_data.pop(idx)
     rebuild_index()
+    save_training_data()
 
 def ensure_intro_text():
     intro = "Non pa mw se Gesner L’IA, kreyatè mw an se Gesner Deslandes nan GlobalInternet.py."
     if not any(item["text"] == intro for item in st.session_state.training_data):
         add_to_training(intro)
-
-# ---------- VOICE CACHE ----------
-VOICE_CACHE = {}
 
 def get_voice_filename(text):
     norm = text.strip().lower()
@@ -465,9 +522,10 @@ def get_voice_filename(text):
     return h
 
 def save_voice_for_text(text, audio_bytes):
+    global VOICE_CACHE
     key = get_voice_filename(text)
     VOICE_CACHE[key] = audio_bytes
-    return key
+    save_voice_cache()
 
 def get_voice_for_text(text):
     if not text:
@@ -658,6 +716,7 @@ def dictionary_manager(t):
                 dict_data[w] = m
                 fact = f"{w} means {m}"
                 add_to_training(fact)
+                save_dictionaries()
                 st.success(t['trained_entry_success'].format(word=w, meaning=m))
                 st.rerun()
         for word, meaning in list(dict_data.items()):
@@ -667,6 +726,7 @@ def dictionary_manager(t):
             with col_b:
                 if st.button(t['dict_delete'], key=f"del_{lang_code}_{word}"):
                     del dict_data[word]
+                    save_dictionaries()
                     st.rerun()
     with col1:
         display_dict("ht", t['dict_ht'], st.session_state.dictionaries["ht"])
@@ -995,7 +1055,11 @@ def main():
         st.session_state.ui_language = "en"
     if "chat_language" not in st.session_state:
         st.session_state.chat_language = "en"
+    
+    # Ensure embedding model and index are rebuilt from loaded data
+    rebuild_index()
     ensure_intro_text()
+    
     show_sidebar()
     t = TEXTS.get(st.session_state.ui_language, TEXTS["en"])
     
