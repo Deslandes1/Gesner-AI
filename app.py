@@ -475,7 +475,7 @@ def get_voice_for_text(text):
     key = get_voice_filename(text)
     return VOICE_CACHE.get(key)
 
-# ---------- CHARACTER PICKER (ONLY USED IN TRAINING CENTER) ----------
+# ---------- CHARACTER PICKER ----------
 def character_picker(key_prefix, label="Insert Kreyòl characters:"):
     chars = [
         "e", "è", "E", "È", "o", "ò", "O", "Ò",
@@ -503,7 +503,6 @@ def retrieve_facts_hybrid(query, k=3):
     for i, idx in enumerate(indices[0]):
         if idx != -1 and idx < len(st.session_state.texts) and distances[0][i] < 1.2:
             results.append(st.session_state.texts[idx])
-    # Keyword fallback
     if st.session_state.tfidf_vectorizer is not None and st.session_state.tfidf_matrix is not None:
         q_vec = st.session_state.tfidf_vectorizer.transform([query])
         scores = cosine_similarity(q_vec, st.session_state.tfidf_matrix).flatten()
@@ -738,7 +737,6 @@ def voice_training(t):
             save_voice_for_text(fact_text, audio_bytes)
             add_to_training(fact_text)
             st.success(t['voice_success'].format(fact=fact_text))
-            # Immediately show a test button for this fact
             st.markdown("---")
             st.markdown(f"### {t['test_this_fact']}")
             st.write(f"**Fact:** {fact_text}")
@@ -803,44 +801,61 @@ def manage_trained_facts(t):
     st.markdown(f"## {t['manage_facts']}")
     if not st.session_state.training_data:
         st.info("No facts trained yet. Use dictionaries, bulk import, or voice training to add facts.")
-    else:
-        for idx, item in enumerate(st.session_state.training_data):
-            original = item["text"]
-            with st.expander(f"Fact #{idx+1}: {original[:60]}..."):
-                character_picker(f"edit_{idx}", "Insert Kreyòl characters for this fact:")
-                new_text = st.text_area("Edit text", value=original, key=f"edit_text_{idx}", height=100)
-                col1, col2, col3 = st.columns([2,2,1])
-                with col1:
-                    if st.button(t['edit_save'], key=f"save_{idx}"):
-                        if new_text.strip() and new_text != original:
-                            update_training_item(idx, new_text)
-                            st.success("Updated")
-                            st.rerun()
-                        elif not new_text.strip():
-                            st.warning("Text cannot be empty.")
-                        else:
-                            st.info("No changes made.")
-                with col2:
-                    if st.button(t['delete'], key=f"delete_{idx}"):
-                        delete_training_item(idx)
-                        st.success("Deleted")
+        return
+
+    for idx, item in enumerate(st.session_state.training_data):
+        original = item["text"]
+        with st.expander(f"Fact #{idx+1}: {original[:60]}..."):
+            character_picker(f"edit_{idx}", "Insert Kreyòl characters for this fact:")
+            new_text = st.text_area("Edit text", value=original, key=f"edit_text_{idx}", height=100)
+            col1, col2, col3 = st.columns([2, 2, 1])
+            with col1:
+                if st.button(t['edit_save'], key=f"save_{idx}"):
+                    if new_text.strip() and new_text != original:
+                        update_training_item(idx, new_text)
+                        st.success("Updated")
                         st.rerun()
-                with col3:
-                    btn_html = play_voice_button(original, False, None, t['test_voice_btn'], f"test_{idx}")
-                    if btn_html:
-                        st.components.v1.html(btn_html, height=50)
-                voice_exists = get_voice_for_text(original) is not None
-                st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
-                
-                st.markdown("---")
-                st.markdown(f"### {t['upload_voice_label']}")
-                voice_file = st.file_uploader(f"Upload for fact #{idx+1}", type=["wav", "mp3"], key=f"attach_voice_{idx}")
-                if voice_file:
-                    if st.button(t['attach_voice_button'], key=f"attach_btn_{idx}"):
-                        audio_bytes = voice_file.read()
-                        save_voice_for_text(original, audio_bytes)
-                        st.success(t['voice_attached_success'])
-                        st.rerun()
+                    elif not new_text.strip():
+                        st.warning("Text cannot be empty.")
+                    else:
+                        st.info("No changes made.")
+            with col2:
+                if st.button(t['delete'], key=f"delete_{idx}"):
+                    delete_training_item(idx)
+                    st.success("Deleted")
+                    st.rerun()
+            with col3:
+                btn_html = play_voice_button(original, False, None, t['test_voice_btn'], f"test_{idx}")
+                if btn_html:
+                    st.components.v1.html(btn_html, height=50)
+
+            voice_exists = get_voice_for_text(original) is not None
+            st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
+
+            st.markdown("---")
+            st.markdown(f"### {t['upload_voice_label']}")
+
+            attach_key = f"attach_voice_{idx}"
+            uploaded_voice = st.file_uploader(
+                "Choose WAV or MP3 file",
+                type=["wav", "mp3"],
+                key=attach_key
+            )
+
+            if st.button(t['attach_voice_button'], key=f"attach_btn_{idx}"):
+                if uploaded_voice is not None:
+                    audio_bytes = uploaded_voice.read()
+                    save_voice_for_text(original, audio_bytes)
+                    st.success(t['voice_attached_success'])
+                    st.rerun()
+                else:
+                    st.error("Please select a voice file first.")
+
+            if get_voice_for_text(original) is not None:
+                st.markdown("✅ **Voice is now attached!**")
+                test_btn = play_voice_button(original, False, None, "🔊 Test attached voice", f"after_attach_{idx}")
+                if test_btn:
+                    st.components.v1.html(test_btn, height=50)
 
 def test_training_section(t):
     st.markdown(f"## {t['test_training_section']}")
