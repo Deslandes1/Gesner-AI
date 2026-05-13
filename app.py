@@ -36,7 +36,6 @@ st.markdown(
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
-    /* Make language selectbox dark black */
     [data-testid="stSidebar"] .stSelectbox {
         background-color: #000000 !important;
         border-radius: 12px !important;
@@ -54,7 +53,6 @@ st.markdown(
         fill: #e94560 !important;
         stroke: #e94560 !important;
     }
-    /* Dropdown menu completely dark black */
     div[data-baseweb="popover"] ul {
         background-color: #000000 !important;
         border: 1px solid #e94560 !important;
@@ -178,6 +176,11 @@ TEXTS = {
         "closest_fact": "Closest fact:",
         "no_fact": "No matching fact found.",
         "play_voice": "Play Voice",
+        "voice_exists": "✅ Voice file attached",
+        "voice_missing": "❌ No voice attached to this fact. Use 'Upload Voice' below.",
+        "upload_voice_label": "Upload voice for this fact (WAV/MP3)",
+        "attach_voice_button": "Attach Voice to Fact",
+        "voice_attached_success": "Voice attached successfully!",
         "dict_title": "📖 Dictionaries",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -230,6 +233,11 @@ TEXTS = {
         "closest_fact": "Fait le plus proche :",
         "no_fact": "Aucun fait correspondant.",
         "play_voice": "Écouter la voix",
+        "voice_exists": "✅ Voix attachée",
+        "voice_missing": "❌ Aucune voix attachée à ce fait. Utilisez 'Télécharger voix' ci-dessous.",
+        "upload_voice_label": "Télécharger une voix pour ce fait (WAV/MP3)",
+        "attach_voice_button": "Attacher la voix au fait",
+        "voice_attached_success": "Voix attachée avec succès !",
         "dict_title": "📖 Dictionnaires",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -282,6 +290,11 @@ TEXTS = {
         "closest_fact": "Fè ki pi pre:",
         "no_fact": "Pa gen fè ki matche.",
         "play_voice": "Jwe vwa",
+        "voice_exists": "✅ Vwa atache",
+        "voice_missing": "❌ Pa gen vwa atache ak fè sa. Sèvi ak 'Chaje vwa' anba a.",
+        "upload_voice_label": "Chaje vwa pou fè sa (WAV/MP3)",
+        "attach_voice_button": "Atache vwa ak fè",
+        "voice_attached_success": "Vwa atache avèk siksè!",
         "dict_title": "📖 Diksyonè",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -334,6 +347,11 @@ TEXTS = {
         "closest_fact": "Hecho más cercano:",
         "no_fact": "No se encontró ningún hecho.",
         "play_voice": "Reproducir voz",
+        "voice_exists": "✅ Voz adjunta",
+        "voice_missing": "❌ No hay voz adjunta a este hecho. Use 'Subir voz' abajo.",
+        "upload_voice_label": "Subir voz para este hecho (WAV/MP3)",
+        "attach_voice_button": "Adjuntar voz al hecho",
+        "voice_attached_success": "¡Voz adjuntada con éxito!",
         "dict_title": "📖 Diccionarios",
         "dict_ht": "Kreyòl Ayisyen",
         "dict_fr": "Français",
@@ -419,6 +437,8 @@ def update_training_item(idx, new_text):
         return False
     embedding = st.session_state.embedding_model.encode([new_text])[0]
     st.session_state.training_data[idx] = {"text": new_text, "embedding": embedding.tolist()}
+    # If text changed, voice is no longer valid (we keep old voice under old key, but better to not copy)
+    # We'll keep it; user can re-upload voice if needed.
     rebuild_index()
     return True
 
@@ -619,7 +639,7 @@ def play_voice_button(text, is_fallback, fallback_audio_lang, button_label="🔊
         else:
             return ""
 
-# ---------- UI COMPONENTS (No character picker in chat) ----------
+# ---------- UI COMPONENTS ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -790,12 +810,22 @@ def manage_trained_facts(t):
                         st.success("Deleted")
                         st.rerun()
                 with col3:
-                    # Test voice button for this fact
                     btn_html = play_voice_button(original, False, None, t['test_voice_btn'], f"test_{idx}")
                     if btn_html:
                         st.components.v1.html(btn_html, height=50)
                 voice_exists = get_voice_for_text(original) is not None
                 st.caption("🔊 Voice file exists" if voice_exists else "🔇 No voice file")
+                
+                # New: Upload voice for this fact
+                st.markdown("---")
+                st.markdown(f"### {t['upload_voice_label']}")
+                voice_file = st.file_uploader(f"Upload for fact #{idx+1}", type=["wav", "mp3"], key=f"attach_voice_{idx}")
+                if voice_file:
+                    if st.button(t['attach_voice_button'], key=f"attach_btn_{idx}"):
+                        audio_bytes = voice_file.read()
+                        save_voice_for_text(original, audio_bytes)
+                        st.success(t['voice_attached_success'])
+                        st.rerun()
 
 def test_training_section(t):
     st.markdown(f"## {t['test_training_section']}")
@@ -803,15 +833,18 @@ def test_training_section(t):
     test_query = st.text_input(t['test_query_label'], key="test_query_input")
     if st.button(t['test_button'], key="run_test"):
         if test_query.strip():
-            # Use the same hybrid retrieval as chat
             facts = retrieve_facts_hybrid(test_query, k=1)
             if facts:
                 best_fact = facts[0]
                 st.success(f"{t['closest_fact']} {best_fact}")
-                # Provide a button to play the voice for that fact
-                btn_html = play_voice_button(best_fact, False, None, t['play_voice'], "test_retrieval")
-                if btn_html:
-                    st.components.v1.html(btn_html, height=50)
+                voice_bytes = get_voice_for_text(best_fact)
+                if voice_bytes:
+                    st.markdown(f"✅ {t['voice_exists']}")
+                    btn_html = play_voice_button(best_fact, False, None, t['play_voice'], "test_retrieval")
+                    if btn_html:
+                        st.components.v1.html(btn_html, height=50)
+                else:
+                    st.warning(t['voice_missing'])
             else:
                 st.warning(t['no_fact'])
         else:
@@ -825,12 +858,11 @@ def training_center(t):
     st.markdown("---")
     bulk_training(t)
     st.markdown("---")
-    test_training_section(t)   # <-- new test section
+    test_training_section(t)
     st.markdown("---")
     manage_trained_facts(t)
 
 def chat_interface(t):
-    # Insert characters (Kreyòl picker) have been removed from chat interface as requested.
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['app_title']}</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center;'>Ask me anything. I learn from dictionaries, bulk import, and voice training.</p>", unsafe_allow_html=True)
     
