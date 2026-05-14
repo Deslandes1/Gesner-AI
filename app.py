@@ -14,11 +14,12 @@ import shutil
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
+from deep_translator import GoogleTranslator
 
-# ========== RESET OLD DATA ==========
+# ========== RESET OLD DATA (COMMENT OUT TO KEEP USER ADDITIONS) ==========
 DATA_DIR = ".gesner_data"
 if os.path.exists(DATA_DIR):
-    shutil.rmtree(DATA_DIR)
+    shutil.rmtree(DATA_DIR)   # Delete old folder to start fresh
 os.makedirs(DATA_DIR, exist_ok=True)
 
 TRAINING_FILE = os.path.join(DATA_DIR, "training_data.json")
@@ -63,11 +64,11 @@ def load_voice_cache():
         return cache
     return {}
 
-# ---------- DEFAULT TRAINING (ENHANCED PATTERNS) ----------
+# ---------- DEFAULT TRAINING FACTS (CLEAN, VERIFIED, ENHANCED) ----------
 def get_default_training_facts():
     facts = []
 
-    # ========== ALPHABET – COUNT ==========
+    # ----- ALPHABET: COUNT -----
     facts.append("Alfabè kreyòl la gen 32 let. Lis la se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Kantite let nan alfabè kreyòl la se 32.")
     facts.append("Konbyen let ki genyen nan alfabè kreyòl? Repons lan se 32 let.")
@@ -81,7 +82,7 @@ def get_default_training_facts():
     facts.append("Kombien let alfabe a genyen? 32 let.")
     facts.append("Konbyen let? 32 let.")
 
-    # ========== ALPHABET – LIST THE LETTERS ==========
+    # ----- ALPHABET: LIST ALL LETTERS (many variations) -----
     facts.append("Lis let alfabè kreyòl la se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Let alfabè kreyòl yo se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Site let alfabè kreyòl la? Lis la se A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
@@ -92,6 +93,7 @@ def get_default_training_facts():
     facts.append("Quelles sont les lettres de l'alphabet créole ? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("What are the letters of the Creole alphabet? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
 
+    # Additional alphabet facts
     facts.append("Premye let nan alfabè kreyòl la se A, dènye let la se Z.")
     facts.append("Let CH nan alfabè kreyòl la pwononse tankou 'sh' nan angle.")
     facts.append("Let È pwononse tankou 'e' nan franse, let Ò pwononse tankou 'o' louvri.")
@@ -99,7 +101,7 @@ def get_default_training_facts():
     facts.append("Kombinasyon UI nan alfabè kreyòl la pwononse tankou 'wi' nan kreyòl. Li parèt nan mo tankou 'uit' (8).")
     facts.append("Kombinasyon NG nan alfabè kreyòl la pwononse tankou 'ng' nan mo angle 'sitting'.")
 
-    # ========== BEGINNER LEVEL ==========
+    # ----- BEGINNER LEVEL (essential phrases) -----
     facts.append("Bonjou se fason pou di 'good morning' an Kreyòl.")
     facts.append("Bonswa se fason pou di 'good evening' an Kreyòl.")
     facts.append("Mèsi se fason pou di 'thank you' an Kreyòl.")
@@ -182,7 +184,7 @@ def get_default_training_facts():
     facts.append("Na wè demen se 'See you tomorrow' an Kreyòl.")
     facts.append("Orevwa se 'Goodbye' an Kreyòl.")
 
-    # ========== INTERMEDIATE & ADVANCED (abridged) ==========
+    # ----- INTERMEDIATE / ADVANCED (abridged but important) -----
     facts.append("Pou fè tan pase an Kreyòl, mete 'te' anvan vèb la. Egzanp: Mwen te manje (I ate).")
     facts.append("Pou fè tan fiti an Kreyòl, mete 'ap' oswa 'pral' anvan vèb la. Egzanp: Mwen ap manje (I will eat).")
     facts.append("Pou fè tan kontinyèl an Kreyòl, mete 'ap' ant pwonon an ak vèb la. Egzanp: M ap manje (I am eating).")
@@ -192,7 +194,7 @@ def get_default_training_facts():
     facts.append("Mo 'kòmsi' itilize pou konparezon ipotetik. Egzanp: Li pale kòmsi li te konnen tout bagay (He speaks as if he knew everything).")
     facts.append("Mo 'menm si' itilize pou konsesyon. Egzanp: Menm si li te rich, li pa ta achte sa (Even if he were rich, he wouldn't buy that).")
 
-    # ========== HAITI HISTORY ==========
+    # ----- HAITI HISTORY (key events) -----
     facts.append("Premye moun ki te rete sou zile Ispanyola (kote Ayiti ye jodi a) se te Endyen Taino yo.")
     facts.append("Kristòf Kolon te rive sou zile a an 1492, li te nonmen l 'La Isla Española'.")
     facts.append("An 1697, Frans te pran kontwòl pati lwès zile a, yo te rele l Sen Domeng.")
@@ -206,12 +208,12 @@ def get_default_training_facts():
     facts.append("Apre presyon entènasyonal, Ariel Henry te demisyone 24 avril 2024.")
     facts.append("Yon Konsèy Prezidansyèl Tranzisyon (CPT) te pran pouvwa 25 avril 2024.")
 
-    # ========== GENERAL KNOWLEDGE ==========
+    # ----- GENERAL KNOWLEDGE (prevent nonsense) -----
     facts.append("Po moun se pi gwo ògàn kò imen an. Li pwoteje kò a kont mikwòb ak blesi.")
     facts.append("Kè moun ponpe san nan tout kò a. Kè yon adilt bat 60 a 100 fwa pa minit.")
     facts.append("Sèvo moun kontwole tout fonksyon kò a, panse, memwa, ak emosyon.")
 
-    # ========== GESNER AI IDENTITY ==========
+    # ----- GESNER AI IDENTITY -----
     facts.append("Gesner AI te kreye pa Gesner Deslandes, fondatè GlobalInternet.py.")
     facts.append("Ou ka poze m nenpòt kesyon an Kreyòl, Franse, Angle, oswa Panyòl.")
     facts.append("Si mwen pa konnen repons lan, mwen di 'Mwen poko konn sa. Tanpri anseye m nan Sant Fòmasyon.'")
@@ -228,6 +230,19 @@ def initialize_default_training():
                 st.session_state.training_data.append({"text": fact, "embedding": embedding.tolist()})
         rebuild_index()
         save_training_data()
+
+# ---------- TRANSLATION HELPER ----------
+def translate_text(text, target_lang):
+    """Translate from Haitian Creole to target_lang (en, fr, es)."""
+    if target_lang == "ht":
+        return text
+    try:
+        translator = GoogleTranslator(source='ht', target=target_lang)
+        translated = translator.translate(text)
+        return translated
+    except Exception as e:
+        # Fallback: return original with note
+        return f"[Translation error] {text}"
 
 # ---------- STREAMLIT PAGE CONFIG ----------
 st.set_page_config(
@@ -360,7 +375,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------- LANGUAGES ----------
+# ---------- LANGUAGES AND TEXTS ----------
 LANGUAGES = {
     "English": "en",
     "Français": "fr",
@@ -603,7 +618,7 @@ TEXTS = {
         "edit_save": "✏️ Guardar",
         "delete": "🗑️ Eliminar",
         "test_voice_btn": "🔊 Probar voz",
-        "footer": "© GlobalInternet.py – Gesner AI | Chat público siempre gratuito, entrenamiento protegido por clave API"
+        "footer": "© GlobalInternet.py – Gesner AI | Chat público siempre gratuito, entrenamiento protegido por clé API"
     }
 }
 
@@ -770,30 +785,40 @@ def reason_about_question(query, lang):
     return None
 
 def generate_response(user_input, target_lang):
-    direct = direct_keyword_answer(user_input, target_lang)
+    # Always retrieve best Kreyòl answer first
+    direct = direct_keyword_answer(user_input, "ht")
     if direct:
-        return direct, False, None, target_lang
-    facts = retrieve_facts_hybrid(user_input, k=3)
-    if facts:
-        return facts[0], False, None, target_lang
-    logic = reason_about_question(user_input, target_lang)
-    if logic:
-        return logic, False, None, target_lang
-    fallbacks = {
-        "en": "I don't know that yet. Please teach me using the Training Center.",
-        "fr": "Je ne connais pas encore cela. Enseignez‑moi via le Centre d'entraînement.",
-        "ht": "Mwen poko konn sa. Tanpri anseye m nan Sant Fòmasyon.",
-        "es": "Todavía no lo sé. Por favor enséñame en el Centro de Entrenamiento."
-    }
-    return fallbacks.get(target_lang, fallbacks["en"]), True, target_lang, target_lang
+        kreyol_answer = direct
+    else:
+        facts = retrieve_facts_hybrid(user_input, k=3)
+        if facts:
+            kreyol_answer = facts[0]
+        else:
+            logic = reason_about_question(user_input, "ht")
+            if logic:
+                kreyol_answer = logic
+            else:
+                fallbacks = {
+                    "en": "I don't know that yet. Please teach me using the Training Center.",
+                    "fr": "Je ne connais pas encore cela. Enseignez‑moi via le Centre d'entraînement.",
+                    "ht": "Mwen poko konn sa. Tanpri anseye m nan Sant Fòmasyon.",
+                    "es": "Todavía no lo sé. Por favor enséñame en el Centro de Entrenamiento."
+                }
+                kreyol_answer = fallbacks.get("ht", "Mwen poko konn sa.")
+    # Translate if needed
+    if target_lang == "ht":
+        final_answer = kreyol_answer
+    else:
+        final_answer = translate_text(kreyol_answer, target_lang)
+    is_fallback = (kreyol_answer.startswith("Mwen poko konn sa") or
+                   kreyol_answer.startswith("I don't know") or
+                   kreyol_answer.startswith("Je ne connais pas") or
+                   kreyol_answer.startswith("Todavía no lo sé"))
+    return final_answer, is_fallback, target_lang, target_lang
 
 def play_voice_button(text, lang, button_label="🔊", key_suffix=""):
-    """
-    For English, French, Spanish: always use TTS (browser speech synthesis).
-    For Kreyòl: only if a custom voice file is attached; otherwise return empty string.
-    """
-    # If language is not Haitian Creole, always use TTS
-    if lang in ["en", "fr", "es"]:
+    # For non-Kreyòl, always use TTS
+    if lang != "ht":
         lang_map = {"en":"en-US", "fr":"fr-FR", "es":"es-ES"}
         tts_lang = lang_map.get(lang, "en-US")
         safe_text = json.dumps(text)
@@ -839,7 +864,7 @@ def play_voice_button(text, lang, button_label="🔊", key_suffix=""):
         """
         return html
     else:
-        # Kreyòl: only if custom voice exists
+        # Kreyòl: only custom voice
         voice_bytes = get_voice_for_text(text)
         if voice_bytes:
             audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -865,7 +890,7 @@ def play_voice_button(text, lang, button_label="🔊", key_suffix=""):
         else:
             return ""
 
-# ---------- UI COMPONENTS (unchanged except chat_interface) ----------
+# ---------- UI COMPONENTS ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -1118,7 +1143,6 @@ def chat_interface(t):
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                # Use the language stored in the message (default to 'ht')
                 lang = msg.get("lang", "ht")
                 btn_html = play_voice_button(msg["content"], lang, "🔊", f"chat_{idx}")
                 if btn_html:
