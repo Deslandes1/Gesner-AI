@@ -63,11 +63,11 @@ def load_voice_cache():
         return cache
     return {}
 
-# ---------- DEFAULT TRAINING (ENHANCED FOR ALPHABET) ----------
+# ---------- DEFAULT TRAINING (ENHANCED WITH MANY PATTERNS) ----------
 def get_default_training_facts():
     facts = []
 
-    # ========== ALPHABET – COUNT (how many letters) ==========
+    # ========== ALPHABET: COUNT (how many letters) ==========
     facts.append("Alfabè kreyòl la gen 32 let. Lis la se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Kantite let nan alfabè kreyòl la se 32.")
     facts.append("Konbyen let ki genyen nan alfabè kreyòl? Repons lan se 32 let.")
@@ -81,7 +81,7 @@ def get_default_training_facts():
     facts.append("Kombien let alfabe a genyen? 32 let.")
     facts.append("Konbyen let? 32 let.")
 
-    # ========== ALPHABET – LIST ALL LETTERS (for questions like "site let nan alfabe kreyol la") ==========
+    # ========== ALPHABET: LIST ALL LETTERS (for "site let nan alfabe kreyol la") ==========
     facts.append("Lis let alfabè kreyòl la se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Let alfabè kreyòl yo se: A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Site let alfabè kreyòl la? Lis la se A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
@@ -95,10 +95,11 @@ def get_default_training_facts():
     facts.append("Ki tout let alfabè kreyòl la? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Ban m tout let alfabè kreyòl la. A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("Alfabè kreyòl la konpoze de ki let? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
+    # Additional (French and English variations, but AI still replies in Kreyòl)
     facts.append("Quelles sont les lettres de l'alphabet créole ? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
     facts.append("What are the letters of the Creole alphabet? A, B, C, CH, D, E, È, F, G, H, I, J, K, L, M, N, NG, O, Ò, OU, P, R, S, T, UI, V, W, Y, Z.")
 
-    # Additional alphabet facts (unchanged)
+    # Additional alphabet facts
     facts.append("Premye let nan alfabè kreyòl la se A, dènye let la se Z.")
     facts.append("Let CH nan alfabè kreyòl la pwononse tankou 'sh' nan angle.")
     facts.append("Let È pwononse tankou 'e' nan franse, let Ò pwononse tankou 'o' louvri.")
@@ -106,7 +107,7 @@ def get_default_training_facts():
     facts.append("Kombinasyon UI nan alfabè kreyòl la pwononse tankou 'wi' nan kreyòl. Li parèt nan mo tankou 'uit' (8).")
     facts.append("Kombinasyon NG nan alfabè kreyòl la pwononse tankou 'ng' nan mo angle 'sitting'.")
 
-    # ========== BEGINNER LEVEL (same as before) ==========
+    # ========== BEGINNER LEVEL (common phrases) ==========
     facts.append("Bonjou se fason pou di 'good morning' an Kreyòl.")
     facts.append("Bonswa se fason pou di 'good evening' an Kreyòl.")
     facts.append("Mèsi se fason pou di 'thank you' an Kreyòl.")
@@ -189,7 +190,7 @@ def get_default_training_facts():
     facts.append("Na wè demen se 'See you tomorrow' an Kreyòl.")
     facts.append("Orevwa se 'Goodbye' an Kreyòl.")
 
-    # ========== INTERMEDIATE / ADVANCED (abridged) ==========
+    # ========== INTERMEDIATE / ADVANCED (grammar) ==========
     facts.append("Pou fè tan pase an Kreyòl, mete 'te' anvan vèb la. Egzanp: Mwen te manje (I ate).")
     facts.append("Pou fè tan fiti an Kreyòl, mete 'ap' oswa 'pral' anvan vèb la. Egzanp: Mwen ap manje (I will eat).")
     facts.append("Pou fè tan kontinyèl an Kreyòl, mete 'ap' ant pwonon an ak vèb la. Egzanp: M ap manje (I am eating).")
@@ -367,7 +368,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------- LANGUAGES AND TEXTS (UI only, no AI replies) ----------
+# ---------- LANGUAGES FOR UI (English, French, Spanish, Kreyòl) ----------
 LANGUAGES = {
     "English": "en",
     "Français": "fr",
@@ -375,7 +376,7 @@ LANGUAGES = {
     "Español": "es"
 }
 
-# UI texts in four languages (for sidebar, buttons, labels – AI always replies in Kreyòl)
+# UI texts: these are only for interface labels, NOT for AI replies.
 TEXTS = {
     "en": {
         "app_title": "💬 Gesner AI Chat",
@@ -629,8 +630,6 @@ if "dictionaries" not in st.session_state:
     st.session_state.dictionaries = load_dictionaries()
 if "training_access" not in st.session_state:
     st.session_state.training_access = False
-if "chat_language" not in st.session_state:
-    st.session_state.chat_language = "ht"
 if "tfidf_vectorizer" not in st.session_state:
     st.session_state.tfidf_vectorizer = None
 if "tfidf_matrix" not in st.session_state:
@@ -769,7 +768,6 @@ def reason_about_question(query):
     return None
 
 def generate_response(user_input):
-    # Always return answer in Kreyòl
     direct = direct_keyword_answer(user_input)
     if direct:
         return direct, False
@@ -782,7 +780,6 @@ def generate_response(user_input):
     return "Mwen poko konn sa. Tanpri anseye m nan Sant Fòmasyon.", True
 
 def play_voice_button(text, button_label="🔊", key_suffix=""):
-    # Only for Kreyòl custom voices (no TTS for other languages)
     voice_bytes = get_voice_for_text(text)
     if voice_bytes:
         audio_b64 = base64.b64encode(voice_bytes).decode()
@@ -808,7 +805,51 @@ def play_voice_button(text, button_label="🔊", key_suffix=""):
     else:
         return ""
 
-# ---------- UI COMPONENTS (unchanged, all work only in Kreyòl) ----------
+# ---------- SPECIAL FRENCH FALLBACK TTS ----------
+def french_fallback_tts_button(key_suffix=""):
+    # This button appears only when UI language is French and the AI gave a fallback answer.
+    # It speaks "Gesner AI réfléchit à la réponse" in French.
+    text = "Gesner AI réfléchit à la réponse"
+    safe_text = json.dumps(text)
+    html = f"""
+    <button class="speak-btn" id="frenchTTS_{key_suffix}" style="background-color:#ffaa33; border:none; border-radius:30px; padding:5px 12px; margin-left:12px; cursor:pointer;">🔊 (IA réfléchit)</button>
+    <script>
+        (function() {{
+            const btn = document.getElementById('frenchTTS_{key_suffix}');
+            let utterance = null;
+            function speakFrench() {{
+                if (utterance) window.speechSynthesis.cancel();
+                utterance = new SpeechSynthesisUtterance({safe_text});
+                utterance.lang = 'fr-FR';
+                let voices = window.speechSynthesis.getVoices();
+                if (voices.length === 0) {{
+                    window.speechSynthesis.onvoiceschanged = function() {{
+                        voices = window.speechSynthesis.getVoices();
+                        selectBestVoice(voices, utterance);
+                        window.speechSynthesis.speak(utterance);
+                    }};
+                    return;
+                }}
+                selectBestVoice(voices, utterance);
+                window.speechSynthesis.speak(utterance);
+            }}
+            function selectBestVoice(voices, utterance) {{
+                let priorityNames = ['Google français', 'Microsoft Hortense', 'Microsoft Denis', 'Samantha', 'Thomas'];
+                let selected = null;
+                for (let name of priorityNames) {{
+                    selected = voices.find(v => v.lang === 'fr-FR' && v.name.includes(name));
+                    if (selected) break;
+                }}
+                if (!selected) selected = voices.find(v => v.lang === 'fr-FR');
+                if (selected) utterance.voice = selected;
+            }}
+            btn.onclick = speakFrench;
+        }})();
+    </script>
+    """
+    return html
+
+# ---------- UI COMPONENTS ----------
 def dictionary_manager(t):
     st.markdown(f"## {t['dict_title']}")
     col1, col2, col3 = st.columns(3)
@@ -1050,9 +1091,12 @@ def training_center(t):
     st.markdown("---")
     manage_trained_facts(t)
 
-def chat_interface(t):
+def chat_interface(t, ui_lang):
     st.markdown(f"<h1 style='text-align:center; color:#ffd966;'>{t['app_title']}</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>Mwen reponn sèlman an Kreyòl. Poze m kesyon sou alfabè, gramè, istwa Ayiti, oswa nenpòt bagay ou te anseye m.</p>", unsafe_allow_html=True)
+    if ui_lang == "ht":
+        st.markdown("<p style='text-align:center;'>Mwen reponn sèlman an Kreyòl. Poze m kesyon sou alfabè, gramè, istwa Ayiti, oswa nenpòt bagay ou te anseye m.</p>", unsafe_allow_html=True)
+    else:
+        st.markdown("<p style='text-align:center;'>I reply only in Haitian Creole. Ask me questions in Creole about alphabet, grammar, Haiti history, or anything you have taught me.</p>", unsafe_allow_html=True)
     for idx, msg in enumerate(st.session_state.conversation_history):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-message user-message">🧑‍💻 {msg["content"]}</div>', unsafe_allow_html=True)
@@ -1061,9 +1105,15 @@ def chat_interface(t):
             with col1:
                 st.markdown(f'<div class="chat-message assistant-message" style="width:100%;">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
             with col2:
-                btn_html = play_voice_button(msg["content"], "🔊", f"chat_{idx}")
-                if btn_html:
-                    st.components.v1.html(btn_html, height=50)
+                # For French UI and fallback message, show the special TTS button
+                if ui_lang == "fr" and msg.get("is_fallback", False):
+                    btn_html = french_fallback_tts_button(f"fallback_{idx}")
+                    if btn_html:
+                        st.components.v1.html(btn_html, height=50)
+                else:
+                    btn_html = play_voice_button(msg["content"], "🔊", f"chat_{idx}")
+                    if btn_html:
+                        st.components.v1.html(btn_html, height=50)
     user_input = st.text_input(t['chat_input'], key="chat_input")
     if st.button(t['send'], use_container_width=True, key="send_btn"):
         if user_input.strip():
@@ -1120,22 +1170,23 @@ def show_sidebar():
     if st.sidebar.button(t['clear'], key="clear_sidebar"):
         st.session_state.conversation_history = []
         st.rerun()
+    return selected_lang_code
 
 def main():
     if "ui_language" not in st.session_state:
         st.session_state.ui_language = "en"
     rebuild_index()
     initialize_default_training()
-    show_sidebar()
+    ui_lang = show_sidebar()
     t = TEXTS.get(st.session_state.ui_language, TEXTS["en"])
     if st.session_state.training_access:
         mode = st.radio("Select mode", ["💬 Chat Mode", "🔧 Training Center"], horizontal=True)
         if mode == "💬 Chat Mode":
-            chat_interface(t)
+            chat_interface(t, ui_lang)
         else:
             training_center(t)
     else:
-        chat_interface(t)
+        chat_interface(t, ui_lang)
     st.markdown(f'<div class="footer">{t["footer"]}</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
