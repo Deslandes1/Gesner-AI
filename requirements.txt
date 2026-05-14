@@ -2,6 +2,5 @@ streamlit
 sentence-transformers
 faiss-cpu
 scikit-learn
-Pillow
-requests
 numpy
+deep-translator
